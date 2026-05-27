@@ -22,18 +22,14 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
   <style>
-    /* FIX: Ensure bottom of content is not hidden behind fixed nav */
     body {
       padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
     }
-    /* Extra spacer inside main app – pushes content further up */
     .bottom-nav-spacer {
       height: calc(72px + 20px);
       width: 100%;
       pointer-events: none;
-      background: transparent;
     }
-    /* Keep content padding as fallback */
     .content {
       padding-bottom: 16px;
     }
@@ -41,7 +37,6 @@
 </head>
 <body>
 
-<!-- ══ LOADING SCREEN ══ -->
 <div class="screen active" id="loadingScreen">
   <div class="screen-card" id="loadingBox">
     <span class="screen-trophy">📋</span>
@@ -51,7 +46,6 @@
   </div>
 </div>
 
-<!-- ══ MAIN APP ══ -->
 <div id="mainApp" style="display:none;">
 
   <div class="page-header">
@@ -79,24 +73,7 @@
           <input class="search-input" id="searchInput" placeholder="Search team, venue, city…" oninput="applyFilters()">
         </div>
       </div>
-      <div class="chips-scroll">
-        <div class="chip active" onclick="setFilter('all',this)">All</div>
-        <div class="chip" onclick="setFilter('upcoming',this)">Upcoming</div>
-        <div class="chip" onclick="setFilter('played',this)">Played</div>
-        <div class="chip" onclick="setFilter('A',this)">Group A</div>
-        <div class="chip" onclick="setFilter('B',this)">Group B</div>
-        <div class="chip" onclick="setFilter('C',this)">Group C</div>
-        <div class="chip" onclick="setFilter('D',this)">Group D</div>
-        <div class="chip" onclick="setFilter('E',this)">Group E</div>
-        <div class="chip" onclick="setFilter('F',this)">Group F</div>
-        <div class="chip" onclick="setFilter('G',this)">Group G</div>
-        <div class="chip" onclick="setFilter('H',this)">Group H</div>
-        <div class="chip" onclick="setFilter('I',this)">Group I</div>
-        <div class="chip" onclick="setFilter('J',this)">Group J</div>
-        <div class="chip" onclick="setFilter('K',this)">Group K</div>
-        <div class="chip" onclick="setFilter('L',this)">Group L</div>
-        <div class="chip" onclick="setFilter('knockout',this)">⚡ Knockout</div>
-      </div>
+      <div class="chips-scroll" id="chipsContainer"></div>
     </div>
   </div>
 
@@ -104,7 +81,6 @@
     <div class="loading-state"><div class="spinner"></div></div>
   </div>
 
-  <!-- ✅ BOTTOM SPACER – prevents last items from hiding under fixed nav -->
   <div class="bottom-nav-spacer"></div>
 
 </div>
@@ -117,28 +93,26 @@
 let activeFilter = 'all';
 window._onScoreSaved = async function() { await syncMatches(true); };
 
-async function syncMatches(silent = false) {
-  if (!silent) showToast('Refreshing…');
-  try {
-    window._allMatches = await loadAllMatches();
-    updateMiniStats();
-    applyFilters();
-    if (!silent) showToast('✅ Updated');
-  } catch(e) {
-    showToast('Sync failed', 'error');
+function buildChips() {
+  const container = document.getElementById('chipsContainer');
+  if (!container) return;
+  const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  let chipsHTML = `
+    <div class="chip active" data-filter="all">All</div>
+    <div class="chip" data-filter="upcoming">Upcoming</div>
+    <div class="chip" data-filter="played">Played</div>
+  `;
+  for (let g of groups) {
+    chipsHTML += `<div class="chip chip-group-${g.toLowerCase()}" data-filter="${g}">Group ${g}</div>`;
   }
-}
-
-function updateMiniStats() {
-  const all = window._allMatches || [];
-  const played   = all.filter(m => m.status === 'Played').length;
-  const goals    = all.filter(m => m.status === 'Played')
-                      .reduce((s,m) => s + (parseInt(m.homeScore)||0) + (parseInt(m.awayScore)||0), 0);
-  const upcoming = all.filter(m => m.status !== 'Played').length;
-  document.getElementById('msPlayed').textContent = played;
-  document.getElementById('msGoals').textContent  = goals;
-  document.getElementById('msLeft').textContent   = upcoming;
-  document.getElementById('msTotal').textContent  = all.length;
+  chipsHTML += `<div class="chip chip-knockout" data-filter="knockout">⚡ Knockout</div>`;
+  container.innerHTML = chipsHTML;
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const filter = chip.getAttribute('data-filter');
+      setFilter(filter, chip);
+    });
+  });
 }
 
 function setFilter(f, el) {
@@ -149,20 +123,20 @@ function setFilter(f, el) {
 }
 
 function applyFilters() {
-  const q   = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-  let list  = window._allMatches || [];
-  if      (activeFilter === 'upcoming')  list = list.filter(m => m.status !== 'Played');
-  else if (activeFilter === 'played')    list = list.filter(m => m.status === 'Played');
-  else if (activeFilter === 'knockout')  list = list.filter(m => m.isKO);
-  else if (activeFilter !== 'all')       list = list.filter(m => m.group === activeFilter);
+  const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  let list = window._allMatches || [];
+  if (activeFilter === 'upcoming') list = list.filter(m => m.status !== 'Played');
+  else if (activeFilter === 'played') list = list.filter(m => m.status === 'Played');
+  else if (activeFilter === 'knockout') list = list.filter(m => m.isKO);
+  else if (activeFilter !== 'all') list = list.filter(m => m.group === activeFilter);
   if (q) {
     list = list.filter(m =>
-      m.home.toLowerCase().includes(q)    ||
-      m.away.toLowerCase().includes(q)    ||
-      m.venue.toLowerCase().includes(q)   ||
-      m.city.toLowerCase().includes(q)    ||
+      m.home.toLowerCase().includes(q) ||
+      m.away.toLowerCase().includes(q) ||
+      m.venue.toLowerCase().includes(q) ||
+      m.city.toLowerCase().includes(q) ||
       m.country.toLowerCase().includes(q) ||
-      (m.group||'').toLowerCase().includes(q)
+      (m.group || '').toLowerCase().includes(q)
     );
   }
   renderList(list);
@@ -184,6 +158,29 @@ function renderList(matches) {
   el.innerHTML = html;
 }
 
+async function syncMatches(silent = false) {
+  if (!silent) showToast('Refreshing…');
+  try {
+    window._allMatches = await loadAllMatches();
+    updateMiniStats();
+    applyFilters();
+    if (!silent) showToast('✅ Updated');
+  } catch(e) {
+    showToast('Sync failed', 'error');
+  }
+}
+
+function updateMiniStats() {
+  const all = window._allMatches || [];
+  const played = all.filter(m => m.status === 'Played').length;
+  const goals = all.filter(m => m.status === 'Played').reduce((s,m) => s + (parseInt(m.homeScore)||0) + (parseInt(m.awayScore)||0), 0);
+  const upcoming = all.filter(m => m.status !== 'Played').length;
+  document.getElementById('msPlayed').textContent = played;
+  document.getElementById('msGoals').textContent = goals;
+  document.getElementById('msLeft').textContent = upcoming;
+  document.getElementById('msTotal').textContent = all.length;
+}
+
 window.onload = async function() {
   document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
   await initPageAuth({
@@ -191,6 +188,7 @@ window.onload = async function() {
     onReady: async () => {
       window._allMatches = await loadAllMatches();
       updateMiniStats();
+      buildChips();           // Generate colored chips
       applyFilters();
       showMainApp();
     }
