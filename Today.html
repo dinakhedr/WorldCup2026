@@ -5,23 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-   <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
-<link rel="shortcut icon" href="images/icon-192.png">
-<meta name="apple-mobile-web-app-title" content="WC2026">
-<meta name="theme-color" content="#0D1B3E">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Today's Matches · World Cup 2026</title>
+  <!-- PWA & Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <link rel="shortcut icon" href="images/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="WC2026">
+  <meta name="theme-color" content="#0D1B3E">
+  <!-- Fonts & Styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
+  <style>
+    /* Custom styles for date picker */
+    .date-picker-wrap {
+      margin: 8px 16px 4px;
+      display: flex;
+      justify-content: center;
+    }
+    .date-selector {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 40px;
+      padding: 8px 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gold);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .date-selector:active {
+      transform: scale(0.97);
+      background: rgba(255,255,255,0.15);
+    }
+    .date-selector span:first-child {
+      font-size: 16px;
+    }
+    /* Hidden native date input */
+    #hiddenDateInput {
+      position: fixed;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+    }
+    .bottom-nav-spacer {
+      height: calc(72px + 20px);
+      width: 100%;
+      pointer-events: none;
+    }
+    .content {
+      padding-bottom: 16px;
+    }
+  </style>
 </head>
 <body>
 
-<!-- ══ LOADING SCREEN ══ -->
+<!-- LOADING SCREEN -->
 <div class="screen active" id="loadingScreen">
   <div class="screen-card" id="loadingBox">
     <span class="screen-trophy">📅</span>
@@ -31,10 +79,9 @@
   </div>
 </div>
 
-<!-- ══ MAIN APP ══ -->
+<!-- MAIN APP -->
 <div id="mainApp" style="display:none;">
 
-  <!-- Sticky header -->
   <div class="page-header">
     <div class="header-row">
       <div class="header-left">
@@ -46,117 +93,190 @@
       </div>
     </div>
 
-    <!-- Mini stats for today -->
+    <!-- Three stat cards (dynamic for selected date) -->
     <div class="mini-stats">
-      <div class="mini-stat"><div class="mini-stat-val" id="todayCount">—</div><div class="mini-stat-lbl">Matches today</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="todayCount">—</div><div class="mini-stat-lbl">Matches</div></div>
       <div class="mini-stat"><div class="mini-stat-val" id="todayPlayed">—</div><div class="mini-stat-lbl">Played</div></div>
       <div class="mini-stat"><div class="mini-stat-val" id="todayUpcoming">—</div><div class="mini-stat-lbl">Upcoming</div></div>
-      <div class="mini-stat"><div class="mini-stat-val" id="todayDate">—</div><div class="mini-stat-lbl">Cairo date</div></div>
     </div>
+
+    <!-- Date selector (tappable) -->
+    <div class="date-picker-wrap">
+      <div class="date-selector" id="dateSelector">
+        <span>📆</span>
+        <span id="selectedDateLabel">—</span>
+        <span>▼</span>
+      </div>
+    </div>
+    <input type="date" id="hiddenDateInput" style="position:fixed; opacity:0; pointer-events:none;">
+
   </div>
 
-  <!-- Content: today's match list -->
+  <!-- Match list for selected date -->
   <div class="content" id="todayMatchList">
     <div class="loading-state"><div class="spinner"></div></div>
   </div>
 
+  <div class="bottom-nav-spacer"></div>
+
 </div>
 
-<!-- Score modal mount (shared) -->
 <div id="scoreModalMount"></div>
-
-<!-- Bottom navigation -->
 <div id="bottomNavMount"></div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-  // ── Page state ─────────────────────────────────────────
-  let todayMatches = [];
-  let currentTodayDate = '';
+let allMatches = [];
+let selectedDate = '';      // format DD-MMM-YY (e.g., "14-Jun-26")
+let selectedDateISO = '';   // for date picker: YYYY-MM-DD
 
-  // Expose to utils.js score modal callback
-  window._onScoreSaved = async function() { await syncTodayMatches(true); };
+// ── Expose to score modal refresh ──
+window._onScoreSaved = async function() { await loadDataAndRefresh(); };
 
-  // ── Load & display today's matches ──────────────────────
-  async function loadTodayMatches() {
-    try {
-      const allMatches = await loadAllMatches();
-      const todayCairo = getTodayCairo();
-      currentTodayDate = todayCairo;
+// ── Convert DD-MMM-YY to YYYY-MM-DD for date picker ──
+function toISODate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '';
+  const months = {Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',
+                  Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+  const month = months[parts[1]];
+  if (!month) return '';
+  const day = parts[0].padStart(2,'0');
+  const year = `20${parts[2]}`;
+  return `${year}-${month}-${day}`;
+}
 
-      // Filter matches for today
-      todayMatches = allMatches.filter(m => m.date === todayCairo);
+// ── Convert YYYY-MM-DD to DD-MMM-YY ──
+function fromISODate(isoStr) {
+  if (!isoStr) return '';
+  const date = new Date(isoStr);
+  if (isNaN(date)) return '';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d = String(date.getDate()).padStart(2,'0');
+  const m = months[date.getMonth()];
+  const y = String(date.getFullYear()).slice(-2);
+  return `${d}-${m}-${y}`;
+}
 
-      // Update mini stats
-      const played = todayMatches.filter(m => m.status === 'Played').length;
-      const upcoming = todayMatches.filter(m => m.status !== 'Played').length;
-      document.getElementById('todayCount').textContent = todayMatches.length;
-      document.getElementById('todayPlayed').textContent = played;
-      document.getElementById('todayUpcoming').textContent = upcoming;
-      document.getElementById('todayDate').textContent = todayCairo;
+// ── Get today's Cairo date (DD-MMM-YY) ──
+function getTodayCairoFormatted() {
+  const now = new Date();
+  const cairo = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d = String(cairo.getDate()).padStart(2,'0');
+  const m = months[cairo.getMonth()];
+  const y = String(cairo.getFullYear()).slice(-2);
+  return `${d}-${m}-${y}`;
+}
 
-      renderTodayMatches();
-      return todayMatches;
-    } catch (err) {
-      console.error('Failed to load today matches:', err);
-      document.getElementById('todayMatchList').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">⚠️</div>
-          <div class="empty-txt">Could not load matches<br>Tap refresh to retry</div>
-        </div>`;
-      throw err;
+// ── Load all matches, then update for selected date ──
+async function loadDataAndRefresh() {
+  try {
+    allMatches = await loadAllMatches();
+    if (!selectedDate) {
+      // Set default to today
+      selectedDate = getTodayCairoFormatted();
+      selectedDateISO = toISODate(selectedDate);
     }
+    updateForSelectedDate();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('todayMatchList').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-txt">Could not load matches<br>Tap refresh to retry</div>
+      </div>`;
+    showToast('Failed to load', 'error');
   }
+}
 
-  function renderTodayMatches() {
-    const container = document.getElementById('todayMatchList');
-    if (!todayMatches.length) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">🏖️</div>
-          <div class="empty-txt">No matches scheduled for today<br>${currentTodayDate}</div>
-        </div>`;
-      return;
+function updateForSelectedDate() {
+  // Filter matches for selected date
+  const matchesOnDate = allMatches.filter(m => m.date === selectedDate);
+  const played = matchesOnDate.filter(m => m.status === 'Played').length;
+  const upcoming = matchesOnDate.filter(m => m.status !== 'Played').length;
+  
+  document.getElementById('todayCount').textContent = matchesOnDate.length;
+  document.getElementById('todayPlayed').textContent = played;
+  document.getElementById('todayUpcoming').textContent = upcoming;
+  
+  // Update label
+  const formattedLabel = formatDateLabel(selectedDate);
+  document.getElementById('selectedDateLabel').textContent = formattedLabel;
+  
+  // Render matches
+  renderMatchesList(matchesOnDate, selectedDate);
+}
+
+function renderMatchesList(matches, date) {
+  const container = document.getElementById('todayMatchList');
+  if (!matches.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🏖️</div>
+        <div class="empty-txt">No matches scheduled for<br>${formatDateLabel(date)}</div>
+      </div>`;
+    return;
+  }
+  // Sort by time
+  const sorted = [...matches].sort((a,b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+  let html = `<div class="date-label">📆 ${formatDateLabel(date)}</div>`;
+  sorted.forEach(m => {
+    html += matchCardHTML(m, { showDate: false, onclick: `openScoreModal(${m.num})` });
+  });
+  container.innerHTML = html;
+}
+
+// ── Date picker logic ──
+function setupDatePicker() {
+  const selector = document.getElementById('dateSelector');
+  const hiddenInput = document.getElementById('hiddenDateInput');
+  
+  // Set initial value
+  if (selectedDateISO) hiddenInput.value = selectedDateISO;
+  
+  selector.addEventListener('click', () => {
+    hiddenInput.click();  // open native date picker
+  });
+  
+  hiddenInput.addEventListener('change', (e) => {
+    const newISODate = e.target.value;
+    if (newISODate) {
+      selectedDateISO = newISODate;
+      selectedDate = fromISODate(newISODate);
+      updateForSelectedDate();
+      // Optionally save preference? Not needed.
     }
+  });
+}
 
-    // Sort by time (earliest first)
-    const sorted = [...todayMatches].sort((a,b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
-
-    let html = `<div class="date-label">📆 ${formatDateLabel(currentTodayDate)}</div>`;
-    sorted.forEach(m => {
-      // We pass showDate = false because date is already in the header
-      html += matchCardHTML(m, { showDate: false, onclick: `openScoreModal(${m.num})` });
-    });
-    container.innerHTML = html;
+// ── Refresh (manual) ──
+async function syncTodayMatches() {
+  showToast('Refreshing…');
+  try {
+    await loadDataAndRefresh();
+    showToast('✅ Updated');
+  } catch(e) {
+    showToast('Refresh failed', 'error');
   }
+}
 
-  // ── Sync (refresh) function ─────────────────────────────
-  async function syncTodayMatches(silent = false) {
-    if (!silent) showToast('Refreshing today\'s matches…');
-    try {
-      await loadTodayMatches();
-      if (!silent) showToast('✅ Updated');
-    } catch(e) {
-      console.error(e);
-      if (!silent) showToast('Refresh failed', 'error');
+// ── Page init ──
+window.onload = async function() {
+  document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
+  await initPageAuth({
+    activePage: 'today',
+    onReady: async () => {
+      // Set default selected date to today (Cairo)
+      selectedDate = getTodayCairoFormatted();
+      selectedDateISO = toISODate(selectedDate);
+      await loadDataAndRefresh();
+      setupDatePicker();
+      showMainApp();
     }
-  }
-
-  // ── Page initialisation (uses shared auth) ──────────────
-  window.onload = async function() {
-    // Inject score modal HTML from utils
-    document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
-
-    await initPageAuth({
-      activePage: 'today',
-      onReady: async () => {
-        await loadTodayMatches();
-        showMainApp();
-      }
-    });
-  };
+  });
+};
 </script>
 </body>
 </html>
