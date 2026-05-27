@@ -23,9 +23,11 @@
     /* ── Bracket layout ── */
     .ko-wrap {
       overflow-x: auto;
-      overflow-y: auto;
+      overflow-y: visible;
       -webkit-overflow-scrolling: touch;
       padding: 12px 0 8px;
+      /* flex: 1 so it fills the mainApp column and the spacer still works */
+      flex: 1;
     }
 
     /* The outer bracket flex row — grows as tall as needed */
@@ -362,23 +364,13 @@ function renderBracket(matches) {
   const r16 = byRound['Round of 16'];   //  8 matches
   const qf  = byRound['Quarter-Final']; //  4 matches
   const sf  = byRound['Semi-Final'];    //  2 matches
-
-  /* ── Build the 4-round main bracket ──
-     Each round column contains N slots; slots stretch equally.
-     R32: 16 slots, R16: 8 slots (each = 2× R32 height), QF: 4 slots (4×), SF: 2 slots (8×)
-     We use flex on the round body and flex:1 on each slot so they auto-distribute.
-     The connector columns also use flex pairs that span 2 left-slots each.
-  */
+  const finalMatches  = byRound['Final'];
+  const bronzeMatches = byRound['Bronze Medal'];
 
   function roundColumn(title, matchArr, slotsCount) {
-    // Pad matchArr to slotsCount with nulls if needed
     const padded = [...matchArr];
     while (padded.length < slotsCount) padded.push(null);
-
-    const slots = padded.map(m => `
-      <div class="ko-slot">${buildKOCard(m)}</div>
-    `).join('');
-
+    const slots = padded.map(m => `<div class="ko-slot">${buildKOCard(m)}</div>`).join('');
     return `
       <div class="ko-round">
         <div class="ko-round-title">${title}</div>
@@ -386,67 +378,72 @@ function renderBracket(matches) {
       </div>`;
   }
 
-  // The total number of base slots = number of R32 matches (16)
-  // Each higher round has half as many slots
   const baseSlots = r32.length || 16;
 
-  let bracketHtml = `<div class="ko-bracket">`;
-  bracketHtml += roundColumn('Round of 32',  r32, baseSlots);
-  bracketHtml += buildConnector(baseSlots / 2);      // 8 pairs
-  bracketHtml += roundColumn('Round of 16',  r16, baseSlots / 2);
-  bracketHtml += buildConnector(baseSlots / 4);      // 4 pairs
-  bracketHtml += roundColumn('Quarter-Final', qf, baseSlots / 4);
-  bracketHtml += buildConnector(baseSlots / 8);      // 2 pairs
-  bracketHtml += roundColumn('Semi-Final',   sf, baseSlots / 8);
-  bracketHtml += `</div>`; // ko-bracket
+  // ── Everything in ONE scrollable container ──
+  // Outer wrapper: vertical flex so main bracket row sits above finals row
+  let html = `<div style="display:inline-flex;flex-direction:column;min-width:100%;padding-bottom:16px;">`;
 
-  /* ── Finals row (SF→Final connector + Final card, Bronze separate) ── */
-  const finalMatch  = byRound['Final'][0]  || null;
-  const bronzeMatch = byRound['Bronze Medal'][0] || null;
+  // ── Row 1: Main bracket (R32 → R16 → QF → SF) ──
+  html += `<div class="ko-bracket">`;
+  html += roundColumn('Round of 32',   r32, baseSlots);
+  html += buildConnector(baseSlots / 2);
+  html += roundColumn('Round of 16',   r16, baseSlots / 2);
+  html += buildConnector(baseSlots / 4);
+  html += roundColumn('Quarter-Final', qf,  baseSlots / 4);
+  html += buildConnector(baseSlots / 8);
+  html += roundColumn('Semi-Final',    sf,  baseSlots / 8);
+  html += `</div>`; // .ko-bracket
 
-  // SF→Final: the 2 SF matches connect to the 1 Final
-  // We show this as a clean separate row to avoid the vertical height problem
-  bracketHtml += `<div class="ko-divider"></div>`;
-  bracketHtml += `<div class="ko-finals-row">`;
+  // ── Divider ──
+  html += `<div class="ko-divider"></div>`;
 
-  // SF column (just the 2 cards, small)
-  bracketHtml += `
-    <div class="ko-finals-block">
+  // ── Row 2: SF → connector → Final + Bronze (horizontally) ──
+  // This row has the same horizontal layout as the main bracket above,
+  // so Final aligns under QF/SF and Bronze aligns beside it.
+  html += `<div style="display:flex;flex-direction:row;align-items:flex-start;padding:0 10px 8px;">`;
+
+  // SF repeat (compact — just their cards stacked, no flex-stretch)
+  html += `
+    <div style="width:168px;flex-shrink:0;">
       <div class="ko-finals-title">Semi-Final</div>
-      ${sf.map(m => `<div style="padding:4px 6px;">${buildKOCard(m)}</div>`).join('')}
+      ${sf.map(m => `<div style="padding:3px 6px;">${buildKOCard(m)}</div>`).join('')}
     </div>`;
 
-  // Connector
-  bracketHtml += `
-    <div style="width:28px;flex-shrink:0;padding-top:24px;display:flex;flex-direction:column;">
-      <div style="flex:1;display:flex;flex-direction:row;">
-        <div style="width:14px;display:flex;flex-direction:column;flex:1;">
+  // SF → Final connector (spans both SF cards)
+  html += `
+    <div style="width:28px;flex-shrink:0;display:flex;flex-direction:column;padding-top:22px;align-self:stretch;">
+      <div style="flex:1;display:flex;flex-direction:row;min-height:0;">
+        <div style="width:14px;flex:1;display:flex;flex-direction:column;">
           <div style="flex:1;border-right:2px solid rgba(255,255,255,0.18);border-bottom:2px solid rgba(255,255,255,0.18);border-bottom-right-radius:4px;"></div>
           <div style="flex:1;border-right:2px solid rgba(255,255,255,0.18);border-top:2px solid rgba(255,255,255,0.18);border-top-right-radius:4px;"></div>
         </div>
-        <div style="width:14px;border-top:2px solid rgba(255,255,255,0.18);align-self:center;"></div>
+        <div style="width:14px;border-top:2px solid rgba(255,255,255,0.18);align-self:center;flex-shrink:0;"></div>
       </div>
     </div>`;
 
-  // Final column
-  bracketHtml += `
-    <div class="ko-finals-block">
+  // Final card — centered vertically against the two SF cards
+  const finalM = finalMatches[0] || null;
+  html += `
+    <div style="width:168px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;align-self:stretch;">
       <div class="ko-finals-title">🏆 Final</div>
-      <div style="padding:4px 6px;">${buildKOCard(finalMatch)}</div>
+      <div style="padding:3px 6px;">${buildKOCard(finalM)}</div>
     </div>`;
 
-  // Bronze column
-  if (bronzeMatch) {
-    bracketHtml += `
-      <div class="ko-finals-block" style="margin-left:12px;">
+  // Bronze Medal — beside the Final
+  const bronzeM = bronzeMatches[0] || null;
+  if (bronzeM) {
+    html += `
+      <div style="width:168px;flex-shrink:0;margin-left:16px;">
         <div class="ko-finals-title">🥉 Bronze</div>
-        <div style="padding:4px 6px;">${buildKOCard(bronzeMatch)}</div>
+        <div style="padding:3px 6px;">${buildKOCard(bronzeM)}</div>
       </div>`;
   }
 
-  bracketHtml += `</div>`; // ko-finals-row
+  html += `</div>`; // finals row
+  html += `</div>`; // outer inline-flex
 
-  wrap.innerHTML = bracketHtml;
+  wrap.innerHTML = html;
 }
 
 async function loadKnockout() {
