@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Matches · World Cup 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="utils.js"></script>
+</head>
+<body>
+
+<!-- ══ LOADING SCREEN ══ -->
+<div class="screen active" id="loadingScreen">
+  <div class="screen-card" id="loadingBox">
+    <span class="screen-trophy">📋</span>
+    <div class="screen-title">Matches</div>
+    <div class="screen-sub" id="loadingMsg">Loading match data…</div>
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="mainApp" style="display:none;">
+
+  <!-- Sticky header -->
+  <div class="page-header">
+    <div class="header-row">
+      <div class="header-left">
+        <a class="back-btn" href="Home.html">‹</a>
+        <div class="page-title">📋 All Matches</div>
+      </div>
+      <div class="header-actions">
+        <button class="hdr-btn" onclick="syncMatches()" title="Refresh">🔄</button>
+      </div>
+    </div>
+
+    <!-- Mini stats -->
+    <div class="mini-stats">
+      <div class="mini-stat"><div class="mini-stat-val" id="msPlayed">—</div><div class="mini-stat-lbl">Played</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="msGoals">—</div><div class="mini-stat-lbl">Goals</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="msLeft">—</div><div class="mini-stat-lbl">Upcoming</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="msTotal">104</div><div class="mini-stat-lbl">Total</div></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+      <div class="search-wrap">
+        <div class="search-inner">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" id="searchInput" placeholder="Search team, venue, city…" oninput="applyFilters()">
+        </div>
+      </div>
+      <div class="chips-scroll">
+        <div class="chip active" onclick="setFilter('all',this)">All</div>
+        <div class="chip" onclick="setFilter('upcoming',this)">Upcoming</div>
+        <div class="chip" onclick="setFilter('played',this)">Played</div>
+        <div class="chip" onclick="setFilter('A',this)">Group A</div>
+        <div class="chip" onclick="setFilter('B',this)">Group B</div>
+        <div class="chip" onclick="setFilter('C',this)">Group C</div>
+        <div class="chip" onclick="setFilter('D',this)">Group D</div>
+        <div class="chip" onclick="setFilter('E',this)">Group E</div>
+        <div class="chip" onclick="setFilter('F',this)">Group F</div>
+        <div class="chip" onclick="setFilter('G',this)">Group G</div>
+        <div class="chip" onclick="setFilter('H',this)">Group H</div>
+        <div class="chip" onclick="setFilter('I',this)">Group I</div>
+        <div class="chip" onclick="setFilter('J',this)">Group J</div>
+        <div class="chip" onclick="setFilter('K',this)">Group K</div>
+        <div class="chip" onclick="setFilter('L',this)">Group L</div>
+        <div class="chip" onclick="setFilter('knockout',this)">⚡ Knockout</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Match list -->
+  <div class="content" id="matchList">
+    <div class="loading-state"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<!-- Score modal (shared from utils.js) -->
+<div id="scoreModalMount"></div>
+
+<!-- Bottom nav -->
+<div id="bottomNavMount"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Page state ─────────────────────────────────────────────
+let activeFilter = 'all';
+
+// ── Expose to utils.js score modal ────────────────────────
+window._onScoreSaved = async function() { await syncMatches(true); };
+
+// ── Load & sync ────────────────────────────────────────────
+async function syncMatches(silent = false) {
+  if (!silent) showToast('Refreshing…');
+  try {
+    window._allMatches = await loadAllMatches();
+    updateMiniStats();
+    applyFilters();
+    if (!silent) showToast('✅ Updated');
+  } catch(e) {
+    showToast('Sync failed', 'error');
+  }
+}
+
+function updateMiniStats() {
+  const all = window._allMatches || [];
+  const played   = all.filter(m => m.status === 'Played').length;
+  const goals    = all.filter(m => m.status === 'Played')
+                      .reduce((s,m) => s + (parseInt(m.homeScore)||0) + (parseInt(m.awayScore)||0), 0);
+  const upcoming = all.filter(m => m.status !== 'Played').length;
+  document.getElementById('msPlayed').textContent = played;
+  document.getElementById('msGoals').textContent  = goals;
+  document.getElementById('msLeft').textContent   = upcoming;
+  document.getElementById('msTotal').textContent  = all.length;
+}
+
+// ── Filters ────────────────────────────────────────────────
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const q   = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  let list  = window._allMatches || [];
+
+  if      (activeFilter === 'upcoming')  list = list.filter(m => m.status !== 'Played');
+  else if (activeFilter === 'played')    list = list.filter(m => m.status === 'Played');
+  else if (activeFilter === 'knockout')  list = list.filter(m => m.isKO);
+  else if (activeFilter !== 'all')       list = list.filter(m => m.group === activeFilter);
+
+  if (q) {
+    list = list.filter(m =>
+      m.home.toLowerCase().includes(q)    ||
+      m.away.toLowerCase().includes(q)    ||
+      m.venue.toLowerCase().includes(q)   ||
+      m.city.toLowerCase().includes(q)    ||
+      m.country.toLowerCase().includes(q) ||
+      (m.group||'').toLowerCase().includes(q)
+    );
+  }
+  renderList(list);
+}
+
+// ── Render ─────────────────────────────────────────────────
+function renderList(matches) {
+  const el = document.getElementById('matchList');
+  if (!matches.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-txt">No matches found</div></div>`;
+    return;
+  }
+
+  // Group by date
+  const byDate = {};
+  matches.forEach(m => {
+    (byDate[m.date || 'TBD'] = byDate[m.date || 'TBD'] || []).push(m);
+  });
+
+  let html = '';
+  for (const [date, list] of Object.entries(byDate)) {
+    html += `<div class="date-label">${formatDateLabel(date)}</div>`;
+    list.forEach(m => { html += matchCardHTML(m); });
+  }
+  el.innerHTML = html;
+}
+
+// ── Init ───────────────────────────────────────────────────
+window.onload = async function() {
+  // Inject score modal HTML from utils
+  document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
+
+  await initPageAuth({
+    activePage: 'matches',
+    onReady: async () => {
+      window._allMatches = await loadAllMatches();
+      updateMiniStats();
+      applyFilters();
+      showMainApp();
+    }
+  });
+};
+</script>
+</body>
+</html>
