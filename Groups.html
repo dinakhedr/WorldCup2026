@@ -22,6 +22,7 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
   <style>
+    /* Only page-specific styles (group tables) – no spacer or content overrides */
     .group-standings {
       background: var(--surface);
       border-radius: var(--radius-lg);
@@ -77,14 +78,6 @@
       font-weight: 900;
       color: var(--green-mid);
     }
-    .bottom-nav-spacer {
-      height: calc(72px + 20px);
-      width: 100%;
-      pointer-events: none;
-    }
-    .content {
-      padding-bottom: 16px;
-    }
   </style>
 </head>
 <body>
@@ -123,6 +116,7 @@
     <div class="loading-state"><div class="spinner"></div></div>
   </div>
 
+  <!-- Bottom nav spacer (global CSS) -->
   <div class="bottom-nav-spacer"></div>
 </div>
 
@@ -133,10 +127,8 @@
 <script>
 let allMatches = [];
 
-// ── Expose score modal callback (refresh standings after score change) ──
 window._onScoreSaved = async function() { await refreshAll(); };
 
-// ── Compute standings for a group ──
 function computeGroupStandings(groupId, matches) {
   const teams = GROUPS_TEAMS[groupId] || [];
   const stats = {};
@@ -176,12 +168,10 @@ function computeGroupStandings(groupId, matches) {
     }
   });
 
-  // Calculate GD
   for (let team in stats) {
     stats[team].gd = stats[team].gf - stats[team].ga;
   }
 
-  // Convert to array and sort
   let standings = teams.map(team => ({ team, ...stats[team] }));
   standings.sort((a,b) => {
     if (a.points !== b.points) return b.points - a.points;
@@ -191,7 +181,6 @@ function computeGroupStandings(groupId, matches) {
   return standings;
 }
 
-// ── Render group block (standings table only – no match cards) ──
 function renderGroup(groupId, standings) {
   const color = GRP_COLORS[groupId] || { bg: '#f3f4f6', txt: '#374151', acc: '#6b7280' };
   
@@ -228,7 +217,6 @@ function renderGroup(groupId, standings) {
   `;
 }
 
-// ── Load all data and render groups (no matches after tables) ──
 async function loadGroups() {
   try {
     allMatches = await loadAllMatches();
@@ -262,7 +250,6 @@ async function syncGroups() {
   await refreshAll();
 }
 
-// ── Page init ──
 window.onload = async function() {
   document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
   await initPageAuth({
