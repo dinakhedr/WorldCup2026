@@ -22,7 +22,7 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
   <style>
-    /* Custom styles for date picker */
+    /* Styled date input (replaces chip + hidden input) */
     .date-picker-wrap {
       margin: 8px 16px 4px;
       display: flex;
@@ -41,21 +41,30 @@
       color: var(--gold);
       cursor: pointer;
       transition: all 0.12s;
+      /* Make it look like a button but actually it's a <input type="date"> */
     }
     .date-selector:active {
       transform: scale(0.97);
       background: rgba(255,255,255,0.15);
     }
-    .date-selector span:first-child {
-      font-size: 16px;
+    /* Style the native date input to look exactly like the chip */
+    .date-input-native {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 40px;
+      padding: 8px 20px;
+      font-family: 'Lato', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gold);
+      cursor: pointer;
+      text-align: center;
+      width: auto;
+      min-width: 200px;
     }
-    /* Hidden native date input */
-    #hiddenDateInput {
-      position: fixed;
-      opacity: 0;
-      pointer-events: none;
-      width: 0;
-      height: 0;
+    .date-input-native::-webkit-calendar-picker-indicator {
+      filter: invert(0.8);
+      cursor: pointer;
     }
     .bottom-nav-spacer {
       height: calc(72px + 20px);
@@ -100,15 +109,10 @@
       <div class="mini-stat"><div class="mini-stat-val" id="todayUpcoming">—</div><div class="mini-stat-lbl">Upcoming</div></div>
     </div>
 
-    <!-- Date selector (tappable) -->
+    <!-- Visible date picker (native) -->
     <div class="date-picker-wrap">
-      <div class="date-selector" id="dateSelector">
-        <span>📆</span>
-        <span id="selectedDateLabel">—</span>
-        <span>▼</span>
-      </div>
+      <input type="date" id="datePickerInput" class="date-input-native">
     </div>
-    <input type="date" id="hiddenDateInput" style="position:fixed; opacity:0; pointer-events:none;">
 
   </div>
 
@@ -178,6 +182,9 @@ async function loadDataAndRefresh() {
       // Set default to today
       selectedDate = getTodayCairoFormatted();
       selectedDateISO = toISODate(selectedDate);
+      // Update date picker value
+      const datePicker = document.getElementById('datePickerInput');
+      if (datePicker) datePicker.value = selectedDateISO;
     }
     updateForSelectedDate();
   } catch (err) {
@@ -200,10 +207,6 @@ function updateForSelectedDate() {
   document.getElementById('todayCount').textContent = matchesOnDate.length;
   document.getElementById('todayPlayed').textContent = played;
   document.getElementById('todayUpcoming').textContent = upcoming;
-  
-  // Update label
-  const formattedLabel = formatDateLabel(selectedDate);
-  document.getElementById('selectedDateLabel').textContent = formattedLabel;
   
   // Render matches
   renderMatchesList(matchesOnDate, selectedDate);
@@ -228,25 +231,23 @@ function renderMatchesList(matches, date) {
   container.innerHTML = html;
 }
 
-// ── Date picker logic ──
+// ── Date picker listener ──
 function setupDatePicker() {
-  const selector = document.getElementById('dateSelector');
-  const hiddenInput = document.getElementById('hiddenDateInput');
+  const datePicker = document.getElementById('datePickerInput');
+  if (!datePicker) return;
   
-  // Set initial value
-  if (selectedDateISO) hiddenInput.value = selectedDateISO;
+  // Set initial value to today's Cairo date in ISO format
+  const todayISO = toISODate(getTodayCairoFormatted());
+  datePicker.value = todayISO;
+  selectedDateISO = todayISO;
+  selectedDate = fromISODate(todayISO);
   
-  selector.addEventListener('click', () => {
-    hiddenInput.click();  // open native date picker
-  });
-  
-  hiddenInput.addEventListener('change', (e) => {
+  datePicker.addEventListener('change', (e) => {
     const newISODate = e.target.value;
     if (newISODate) {
       selectedDateISO = newISODate;
       selectedDate = fromISODate(newISODate);
       updateForSelectedDate();
-      // Optionally save preference? Not needed.
     }
   });
 }
@@ -268,9 +269,6 @@ window.onload = async function() {
   await initPageAuth({
     activePage: 'today',
     onReady: async () => {
-      // Set default selected date to today (Cairo)
-      selectedDate = getTodayCairoFormatted();
-      selectedDateISO = toISODate(selectedDate);
       await loadDataAndRefresh();
       setupDatePicker();
       showMainApp();
