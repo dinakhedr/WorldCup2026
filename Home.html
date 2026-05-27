@@ -6,12 +6,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
-<link rel="shortcut icon" href="images/icon-192.png">
-<meta name="apple-mobile-web-app-title" content="WC2026">
-<meta name="theme-color" content="#0D1B3E">
   <title>World Cup 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
@@ -19,6 +13,22 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
+  <style>
+    /* Extra push for homepage content */
+    .home-content-wrapper {
+      padding-top: 12px;
+    }
+    /* Make sync strip look clickable when retry is needed */
+    .sync-inner[data-error="true"] {
+      background: rgba(239,68,68,0.15);
+      border-color: rgba(239,68,68,0.3);
+      cursor: pointer;
+    }
+    .sync-inner[data-error="true"]:active {
+      transform: scale(0.98);
+      background: rgba(239,68,68,0.25);
+    }
+  </style>
 </head>
 <body>
 
@@ -44,80 +54,87 @@
 
 <!-- ══ MAIN APP ══ -->
 <div id="mainApp" style="display:none;">
-
-  <div class="home-header">
-    <div class="header-eyebrow">FIFA · Canada · Mexico · USA</div>
-    <div class="header-title">World Cup <span>2026</span></div>
-    <div class="header-user" id="headerUser"></div>
-  </div>
-
-  <div class="stats-band">
-    <div class="stat-card">
-      <div class="stat-val" id="statPlayed">—</div>
-      <div class="stat-lbl">Played</div>
-      <div class="stat-sub" id="statPlayedSub">of 104</div>
+  <div class="home-content-wrapper">
+    <div class="home-header">
+      <div class="header-eyebrow">FIFA · Canada · Mexico · USA</div>
+      <div class="header-title">World Cup <span>2026</span></div>
+      <div class="header-meta">11 June – 19 July · 104 Matches · 48 Teams</div>
+      <div class="header-user" id="headerUser"></div>
     </div>
-    <div class="stat-card">
-      <div class="stat-val" id="statGoals">—</div>
-      <div class="stat-lbl">Goals</div>
-      <div class="stat-sub">scored</div>
+
+    <div class="stats-band">
+      <div class="stat-card">
+        <div class="stat-val" id="statPlayed">—</div>
+        <div class="stat-lbl">Played</div>
+        <div class="stat-sub" id="statPlayedSub">of 104</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statGoals">—</div>
+        <div class="stat-lbl">Goals</div>
+        <div class="stat-sub">scored</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statLeft">—</div>
+        <div class="stat-lbl">Left</div>
+        <div class="stat-sub">upcoming</div>
+      </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-val" id="statLeft">—</div>
-      <div class="stat-lbl">Left</div>
-      <div class="stat-sub">upcoming</div>
+
+    <!-- Clickable sync strip: retry on tap when error shown -->
+    <div class="sync-strip">
+      <div class="sync-inner" id="syncInner" onclick="retryLoadStats()">
+        <div class="sync-dot"></div>
+        <span id="syncLabel">Loading data…</span>
+      </div>
+    </div>
+
+    <div class="nav-cards">
+      <a class="nav-card card-today" href="Today.html">
+        <div class="nav-card-icon">📅</div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Today's Matches</div>
+          <div class="nav-card-desc" id="todayDesc">Loading…</div>
+        </div>
+        <div class="nav-card-arrow">›</div>
+      </a>
+      <a class="nav-card card-matches" href="Matches.html">
+        <div class="nav-card-icon">📋</div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">All Matches</div>
+          <div class="nav-card-desc">Full schedule · filter by group, stage, status</div>
+        </div>
+        <div class="nav-card-arrow">›</div>
+      </a>
+      <a class="nav-card card-groups" href="Groups.html">
+        <div class="nav-card-icon">👥</div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Groups</div>
+          <div class="nav-card-desc">Groups A–L · enter match results</div>
+        </div>
+        <div class="nav-card-arrow">›</div>
+      </a>
+      <a class="nav-card card-knockout" href="Knockout.html">
+        <div class="nav-card-icon">⚡</div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Knockout Stage</div>
+          <div class="nav-card-desc">R32 · R16 · QF · SF · Final</div>
+        </div>
+        <div class="nav-card-arrow">›</div>
+      </a>
+      <a class="nav-card card-standing" href="Standings.html">
+        <div class="nav-card-icon">📊</div>
+        <div class="nav-card-body">
+          <div class="nav-card-title">Standings</div>
+          <div class="nav-card-desc">Live group tables · auto-calculated</div>
+        </div>
+        <div class="nav-card-arrow">›</div>
+      </a>
+    </div>
+
+    <div class="signout-wrap">
+      <button class="signout-btn" onclick="doSignOut()">🚪 Sign Out</button>
     </div>
   </div>
-
-  <div class="sync-strip">
-    <div class="sync-inner">
-      <div class="sync-dot"></div>
-      <span id="syncLabel">Loading data…</span>
-    </div>
-  </div>
-
-  <div class="nav-cards">
-    <a class="nav-card card-today" href="Today.html">
-      <div class="nav-card-icon">📅</div>
-      <div class="nav-card-body">
-        <div class="nav-card-title">Today's Matches</div>
-      </div>
-      <div class="nav-card-arrow">›</div>
-    </a>
-    <a class="nav-card card-matches" href="Matches.html">
-      <div class="nav-card-icon">📋</div>
-      <div class="nav-card-body">
-        <div class="nav-card-title">All Matches</div>
-      </div>
-      <div class="nav-card-arrow">›</div>
-    </a>
-    <a class="nav-card card-groups" href="Groups.html">
-      <div class="nav-card-icon">👥</div>
-      <div class="nav-card-body">
-        <div class="nav-card-title">Groups</div>
-      </div>
-      <div class="nav-card-arrow">›</div>
-    </a>
-    <a class="nav-card card-knockout" href="Knockout.html">
-      <div class="nav-card-icon">⚡</div>
-      <div class="nav-card-body">
-        <div class="nav-card-title">Knockout Stage</div>
-      </div>
-      <div class="nav-card-arrow">›</div>
-    </a>
-    <a class="nav-card card-standing" href="Standings.html">
-      <div class="nav-card-icon">📊</div>
-      <div class="nav-card-body">
-        <div class="nav-card-title">Standings</div>
-      </div>
-      <div class="nav-card-arrow">›</div>
-    </a>
-  </div>
-
-  <div class="signout-wrap">
-    <button class="signout-btn" onclick="doSignOut()">Sign Out</button>
-  </div>
-
 </div>
 
 <!-- Bottom nav -->
@@ -166,7 +183,16 @@ async function showMainApp() {
   await loadHomeStats();
 }
 
+// Improved loadHomeStats with better error handling and retry support
 async function loadHomeStats() {
+  const syncInner = document.getElementById('syncInner');
+  const syncLabel = document.getElementById('syncLabel');
+  
+  // Reset error style
+  syncInner.removeAttribute('data-error');
+  syncInner.style.cursor = 'pointer'; // always clickable for manual refresh
+  syncLabel.textContent = 'Updating stats…';
+  
   try {
     const matches = await loadAllMatches();
     const today   = getTodayCairo();
@@ -191,12 +217,57 @@ async function loadHomeStats() {
       ? `${todayCount} match${todayCount > 1 ? 'es' : ''} today · Cairo time`
       : 'No matches today — see upcoming';
 
-    document.getElementById('syncLabel').textContent =
-      '✅ Updated ' + new Date().toLocaleTimeString('en-EG', { hour:'2-digit', minute:'2-digit' });
+    syncLabel.textContent = '✅ Updated ' + new Date().toLocaleTimeString('en-EG', { hour:'2-digit', minute:'2-digit' });
+    syncInner.setAttribute('data-error', 'false');
   } catch(e) {
-    document.getElementById('syncLabel').textContent = '⚠️ Could not load data';
+    console.error('Stats load error:', e);
+    syncLabel.textContent = '⚠️ Could not load data — tap to retry';
+    syncInner.setAttribute('data-error', 'true');
+    // Keep placeholder values but show error state
+    document.getElementById('statPlayed').textContent = '?';
+    document.getElementById('statGoals').textContent  = '?';
+    document.getElementById('statLeft').textContent   = '?';
   }
 }
+
+// Manual retry function attached to sync strip
+window.retryLoadStats = async function() {
+  const syncInner = document.getElementById('syncInner');
+  const syncLabel = document.getElementById('syncLabel');
+  
+  // Prevent multiple rapid retries
+  if (syncLabel.textContent.includes('Updating')) return;
+  
+  // If we are in error state, try to refresh token before retrying
+  if (syncInner.getAttribute('data-error') === 'true') {
+    // Attempt to re-authenticate silently
+    try {
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        prompt: '',
+        callback: async (resp) => {
+          if (resp.access_token) {
+            saveAccessToken(resp.access_token);
+            gapi.client.setToken({ access_token: resp.access_token });
+            await loadHomeStats();
+            showToast('Stats refreshed');
+          } else {
+            showToast('Authentication failed', 'error');
+            syncLabel.textContent = '⚠️ Auth error — sign out & back in';
+          }
+        }
+      });
+      tokenClient.requestAccessToken();
+    } catch(err) {
+      showToast('Retry failed', 'error');
+    }
+  } else {
+    // Normal retry
+    await loadHomeStats();
+    showToast('Refreshed');
+  }
+};
 
 async function checkLogin() {
   const jwt = localStorage.getItem('wc_google_token');
