@@ -667,6 +667,16 @@ body {
 .toast.error { background: #991b1b; }
 
 /* ════════════════════════════════════════════════════════════
+   Bottom nav spacer
+   ════════════════════════════════════════════════════════════ */
+/* Bottom nav spacer – prevents content from hiding behind fixed nav */
+.bottom-nav-spacer {
+  height: calc(var(--nav-h) + 24px);
+  width: 100%;
+  pointer-events: none;
+}
+
+/* ════════════════════════════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════════════════════════════ */
 @media (max-width: 390px) {
