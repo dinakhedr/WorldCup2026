@@ -6,15 +6,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Standings · World Cup 2026</title>
-  <!-- PWA & Icons -->
+  <title>Overall Standings · World Cup 2026</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
   <link rel="shortcut icon" href="images/icon-192.png">
   <meta name="apple-mobile-web-app-title" content="WC2026">
   <meta name="theme-color" content="#0D1B3E">
-  <!-- Fonts & Styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
@@ -22,36 +20,25 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
   <style>
-    /* Standings-specific styles (matching Groups.html) */
-    .group-standings {
+    .overall-table {
       background: var(--surface);
       border-radius: var(--radius-lg);
-      margin: 12px 12px 20px;
+      margin: 12px;
       overflow-x: auto;
     }
-    .group-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
+    .overall-header {
       padding: 12px 16px;
       background: var(--surface-2);
       border-bottom: 1px solid var(--border);
-    }
-    .group-name {
-      font-size: 18px;
       font-weight: 900;
-      letter-spacing: -0.3px;
+      font-size: 16px;
     }
-    .group-teams-list {
-      font-size: 11px;
-      color: var(--text-3);
-    }
-    .standings-table {
+    .rank-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
     }
-    .standings-table th {
+    .rank-table th {
       padding: 10px 5px;
       text-align: center;
       font-size: 10px;
@@ -60,63 +47,69 @@
       color: var(--text-3);
       border-bottom: 1px solid var(--border);
     }
-    .standings-table th:first-child { text-align: left; padding-left: 12px; }
-    .standings-table td {
+    .rank-table th:first-child { text-align: left; padding-left: 12px; }
+    .rank-table td {
       padding: 10px 5px;
       text-align: center;
       border-bottom: 1px solid var(--border);
       color: var(--text-2);
     }
-    .standings-table td:first-child {
+    .rank-table td:first-child {
       text-align: left;
       font-weight: 700;
       color: var(--text);
       padding-left: 12px;
     }
-    .standings-table tr:last-child td { border-bottom: none; }
-    .qualify-cell {
-      font-weight: 900;
-      color: var(--green-mid);
+    .rank-table tr:last-child td { border-bottom: none; }
+    .qualified {
+      background: rgba(30,64,175,0.05);
+    }
+    .qualified-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--green-mid);
+      border-radius: 50%;
+      margin-right: 6px;
     }
   </style>
 </head>
 <body>
 
-<!-- LOADING SCREEN -->
 <div class="screen active" id="loadingScreen">
   <div class="screen-card" id="loadingBox">
     <span class="screen-trophy">📊</span>
-    <div class="screen-title">Standings</div>
-    <div class="screen-sub" id="loadingMsg">Loading group standings…</div>
+    <div class="screen-title">Overall Standings</div>
+    <div class="screen-sub" id="loadingMsg">Loading tournament ranking…</div>
     <div class="spinner"></div>
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="mainApp" style="display:none;">
-
   <div class="page-header">
     <div class="header-row">
       <div class="header-left">
         <a class="back-btn" href="Home.html">‹</a>
-        <div class="page-title">📊 Group Standings</div>
+        <div class="page-title">📊 Overall Standings</div>
       </div>
       <div class="header-actions">
-        <button class="hdr-btn" onclick="syncStandings()" title="Refresh">🔄</button>
+        <button class="hdr-btn" onclick="syncOverall()" title="Refresh">🔄</button>
       </div>
     </div>
     <div class="mini-stats">
-      <div class="mini-stat"><div class="mini-stat-val" id="totalMatches">—</div><div class="mini-stat-lbl">Group matches</div></div>
-      <div class="mini-stat"><div class="mini-stat-val" id="playedMatches">—</div><div class="mini-stat-lbl">Played</div></div>
-      <div class="mini-stat"><div class="mini-stat-val" id="groupsCount">12</div><div class="mini-stat-lbl">Groups</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="totalTeams">48</div><div class="mini-stat-lbl">Teams</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="qualifiedCount">—</div><div class="mini-stat-lbl">Qualified*</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="avgGoals">—</div><div class="mini-stat-lbl">Avg goals/match</div></div>
     </div>
   </div>
 
-  <div id="standingsContainer" class="content" style="background: var(--surface-2);">
-    <div class="loading-state"><div class="spinner"></div></div>
+  <div class="overall-table">
+    <div class="overall-header">🏆 All 48 Teams – Ranked by Points → GD → GF</div>
+    <div id="rankingContainer" class="content" style="background: transparent; padding: 0;">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
   </div>
 
-  <!-- Bottom nav spacer (global CSS) -->
   <div class="bottom-nav-spacer"></div>
 </div>
 
@@ -126,55 +119,101 @@
 
 <script>
 let allMatches = [];
+window._onScoreSaved = async function() { await loadOverall(); };
 
-// Refresh standings when a score is saved elsewhere
-window._onScoreSaved = async function() { await refreshAll(); };
+// Collect stats for all teams across all group matches
+function computeOverallStandings() {
+  const teamStats = {};
+  // Initialize all teams from GROUPS_TEAMS
+  for (let group in GROUPS_TEAMS) {
+    GROUPS_TEAMS[group].forEach(team => {
+      teamStats[team] = { group, played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0 };
+    });
+  }
 
-// ── Compute standings for a group (identical to Groups.html) ──
-function computeGroupStandings(groupId, matches) {
-  const teams = GROUPS_TEAMS[groupId] || [];
-  const stats = {};
-  teams.forEach(team => {
-    stats[team] = { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0 };
-  });
-
-  matches.forEach(m => {
+  const groupMatches = allMatches.filter(m => !m.isKO);
+  groupMatches.forEach(m => {
     if (m.status !== 'Played') return;
-    const home = m.home;
-    const away = m.away;
-    if (!stats[home] || !stats[away]) return;
-
+    const home = m.home, away = m.away;
+    if (!teamStats[home] || !teamStats[away]) return;
     const hg = parseInt(m.homeScore) || 0;
     const ag = parseInt(m.awayScore) || 0;
 
-    stats[home].played++;
-    stats[away].played++;
+    teamStats[home].played++;
+    teamStats[away].played++;
+    teamStats[home].gf += hg;
+    teamStats[home].ga += ag;
+    teamStats[away].gf += ag;
+    teamStats[away].ga += hg;
+
+    if (hg > ag) {
+      teamStats[home].wins++;
+      teamStats[away].losses++;
+      teamStats[home].points += 3;
+    } else if (ag > hg) {
+      teamStats[away].wins++;
+      teamStats[home].losses++;
+      teamStats[away].points += 3;
+    } else {
+      teamStats[home].draws++;
+      teamStats[away].draws++;
+      teamStats[home].points += 1;
+      teamStats[away].points += 1;
+    }
+  });
+
+  for (let team in teamStats) {
+    teamStats[team].gd = teamStats[team].gf - teamStats[team].ga;
+  }
+
+  // Convert to array and sort
+  let ranking = Object.entries(teamStats).map(([team, stats]) => ({ team, ...stats }));
+  ranking.sort((a,b) => {
+    if (a.points !== b.points) return b.points - a.points;
+    if (a.gd !== b.gd) return b.gd - a.gd;
+    return b.gf - a.gf;
+  });
+  return ranking;
+}
+
+// Determine qualification (top 2 in each group = 24 teams; for visual, we mark them)
+function getQualifiedTeams() {
+  // Compute per-group standings to find top 2
+  const qualified = new Set();
+  for (let g of ['A','B','C','D','E','F','G','H','I','J','K','L']) {
+    const groupMatches = allMatches.filter(m => m.group === g && !m.isKO);
+    const standings = computeGroupStandingsForQualification(g, groupMatches);
+    // standings is already sorted; take first 2
+    if (standings[0]) qualified.add(standings[0].team);
+    if (standings[1]) qualified.add(standings[1].team);
+  }
+  return qualified;
+}
+
+function computeGroupStandingsForQualification(groupId, matches) {
+  const teams = GROUPS_TEAMS[groupId] || [];
+  const stats = {};
+  teams.forEach(team => {
+    stats[team] = { points: 0, gd: 0, gf: 0 };
+  });
+  matches.forEach(m => {
+    if (m.status !== 'Played') return;
+    const home = m.home, away = m.away;
+    if (!stats[home] || !stats[away]) return;
+    const hg = parseInt(m.homeScore) || 0;
+    const ag = parseInt(m.awayScore) || 0;
     stats[home].gf += hg;
     stats[home].ga += ag;
     stats[away].gf += ag;
     stats[away].ga += hg;
-
-    if (hg > ag) {
-      stats[home].wins++;
-      stats[away].losses++;
-      stats[home].points += 3;
-    } else if (ag > hg) {
-      stats[away].wins++;
-      stats[home].losses++;
-      stats[away].points += 3;
-    } else {
-      stats[home].draws++;
-      stats[away].draws++;
-      stats[home].points += 1;
-      stats[away].points += 1;
-    }
+    if (hg > ag) { stats[home].points += 3; }
+    else if (ag > hg) { stats[away].points += 3; }
+    else { stats[home].points += 1; stats[away].points += 1; }
   });
-
   for (let team in stats) {
-    stats[team].gd = stats[team].gf - stats[team].ga;
+    stats[team].gd = (stats[team].gf || 0) - (stats[team].ga || 0);
   }
-
-  let standings = teams.map(team => ({ team, ...stats[team] }));
+  let standings = teams.map(team => ({ team, points: stats[team].points, gd: stats[team].gd, gf: stats[team].gf }));
   standings.sort((a,b) => {
     if (a.points !== b.points) return b.points - a.points;
     if (a.gd !== b.gd) return b.gd - a.gd;
@@ -183,84 +222,62 @@ function computeGroupStandings(groupId, matches) {
   return standings;
 }
 
-// ── Render a group standings table ──
-function renderGroupStandings(groupId, standings) {
-  const color = GRP_COLORS[groupId] || { bg: '#f3f4f6', txt: '#374151', acc: '#6b7280' };
-  
-  let tableRows = '';
-  standings.forEach((team, idx) => {
-    const qualifyClass = (idx < 2) ? 'qualify-cell' : '';
-    tableRows += `<tr>
-      <td>${idx+1}</td>
-      <td style="text-align:left; font-weight:700;">${escHtml(team.team)}</td>
-      <td>${team.played}</td>
-      <td>${team.wins}</td>
-      <td>${team.draws}</td>
-      <td>${team.losses}</td>
-      <td>${team.gf}</td>
-      <td>${team.ga}</td>
-      <td>${team.gd}</td>
-      <td class="${qualifyClass}">${team.points}</td>
-    </tr>`;
-  });
-
-  return `
-    <div class="group-standings" style="border-left: 4px solid ${color.acc};">
-      <div class="group-header" style="background: ${color.bg}20;">
-        <div class="group-name" style="color: ${color.txt};">Group ${groupId}</div>
-        <div class="group-teams-list">${GROUPS_TEAMS[groupId].join(' · ')}</div>
-      </div>
-      <table class="standings-table">
-        <thead>
-          <tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-// ── Load all data and render all standings ──
-async function loadStandings() {
+async function loadOverall() {
   try {
     allMatches = await loadAllMatches();
-    const groupMatches = allMatches.filter(m => !m.isKO);
-    const totalGroupMatches = groupMatches.length;
-    const playedGroupMatches = groupMatches.filter(m => m.status === 'Played').length;
-    document.getElementById('totalMatches').textContent = totalGroupMatches;
-    document.getElementById('playedMatches').textContent = playedGroupMatches;
+    const ranking = computeOverallStandings();
+    const qualified = getQualifiedTeams();
+    const qualifiedCount = qualified.size;
 
-    let standingsHtml = '';
-    for (let g of ['A','B','C','D','E','F','G','H','I','J','K','L']) {
-      const matchesInGroup = groupMatches.filter(m => m.group === g);
-      const standings = computeGroupStandings(g, matchesInGroup);
-      standingsHtml += renderGroupStandings(g, standings);
-    }
-    document.getElementById('standingsContainer').innerHTML = standingsHtml;
+    // Calculate average goals per played match
+    const playedMatches = allMatches.filter(m => m.status === 'Played');
+    const totalGoals = playedMatches.reduce((sum, m) => sum + (parseInt(m.homeScore)||0) + (parseInt(m.awayScore)||0), 0);
+    const avgGoals = playedMatches.length ? (totalGoals / playedMatches.length).toFixed(2) : '0.00';
+
+    document.getElementById('qualifiedCount').textContent = qualifiedCount;
+    document.getElementById('avgGoals').textContent = avgGoals;
+
+    let html = `<table class="rank-table">
+      <thead><tr><th>Rank</th><th>Team</th><th>Group</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead>
+      <tbody>`;
+    ranking.forEach((team, idx) => {
+      const isQualified = qualified.has(team.team);
+      const rowClass = isQualified ? 'qualified' : '';
+      html += `<tr class="${rowClass}">
+        <td>${idx+1}</td>
+        <td style="text-align:left; font-weight:700;">${isQualified ? '<span class="qualified-indicator"></span>' : ''}${escHtml(team.team)}</td>
+        <td>${team.group}</td>
+        <td>${team.played}</td>
+        <td>${team.wins}</td>
+        <td>${team.draws}</td>
+        <td>${team.losses}</td>
+        <td>${team.gf}</td>
+        <td>${team.ga}</td>
+        <td>${team.gd}</td>
+        <td class="${isQualified ? 'qualify-cell' : ''}">${team.points}</td>
+      </tr>`;
+    });
+    html += `</tbody></table><div class="empty-txt" style="padding:12px; text-align:center; font-size:11px;">*Qualified for knockout stage (top 2 in each group)</div>`;
+    document.getElementById('rankingContainer').innerHTML = html;
   } catch (err) {
     console.error(err);
-    document.getElementById('standingsContainer').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load standings</div></div>`;
-    showToast('Failed to load standings', 'error');
+    document.getElementById('rankingContainer').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load overall standings</div></div>`;
+    showToast('Failed to load overall standings', 'error');
   }
 }
 
-async function refreshAll() {
-  showToast('Refreshing standings…');
-  await loadStandings();
+async function syncOverall() {
+  showToast('Refreshing overall standings…');
+  await loadOverall();
   showToast('✅ Updated');
 }
 
-async function syncStandings() {
-  await refreshAll();
-}
-
-// ── Page init ──
 window.onload = async function() {
   document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
   await initPageAuth({
     activePage: 'standings',
     onReady: async () => {
-      await loadStandings();
+      await loadOverall();
       showMainApp();
     }
   });
