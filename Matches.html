@@ -5,19 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
-<link rel="shortcut icon" href="images/icon-192.png">
-<meta name="apple-mobile-web-app-title" content="WC2026">
-<meta name="theme-color" content="#0D1B3E">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Matches · World Cup 2026</title>
+  <!-- PWA & Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <link rel="shortcut icon" href="images/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="WC2026">
+  <meta name="theme-color" content="#0D1B3E">
+  <!-- Fonts & Styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
+  <style>
+    /* FIX: Ensure bottom of content is not hidden behind fixed nav */
+    body {
+      padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    /* Extra spacer inside main app – pushes content further up */
+    .bottom-nav-spacer {
+      height: calc(72px + 20px);
+      width: 100%;
+      pointer-events: none;
+      background: transparent;
+    }
+    /* Keep content padding as fallback */
+    .content {
+      padding-bottom: 16px;
+    }
+  </style>
 </head>
 <body>
 
@@ -34,7 +54,6 @@
 <!-- ══ MAIN APP ══ -->
 <div id="mainApp" style="display:none;">
 
-  <!-- Sticky header -->
   <div class="page-header">
     <div class="header-row">
       <div class="header-left">
@@ -46,7 +65,6 @@
       </div>
     </div>
 
-    <!-- Mini stats -->
     <div class="mini-stats">
       <div class="mini-stat"><div class="mini-stat-val" id="msPlayed">—</div><div class="mini-stat-lbl">Played</div></div>
       <div class="mini-stat"><div class="mini-stat-val" id="msGoals">—</div><div class="mini-stat-lbl">Goals</div></div>
@@ -54,7 +72,6 @@
       <div class="mini-stat"><div class="mini-stat-val" id="msTotal">104</div><div class="mini-stat-lbl">Total</div></div>
     </div>
 
-    <!-- Filters -->
     <div class="filter-section">
       <div class="search-wrap">
         <div class="search-inner">
@@ -83,30 +100,23 @@
     </div>
   </div>
 
-  <!-- Match list -->
   <div class="content" id="matchList">
     <div class="loading-state"><div class="spinner"></div></div>
   </div>
 
+  <!-- ✅ BOTTOM SPACER – prevents last items from hiding under fixed nav -->
+  <div class="bottom-nav-spacer"></div>
+
 </div>
 
-<!-- Score modal (shared from utils.js) -->
 <div id="scoreModalMount"></div>
-
-<!-- Bottom nav -->
 <div id="bottomNavMount"></div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ── Page state ─────────────────────────────────────────────
 let activeFilter = 'all';
-
-// ── Expose to utils.js score modal ────────────────────────
 window._onScoreSaved = async function() { await syncMatches(true); };
 
-// ── Load & sync ────────────────────────────────────────────
 async function syncMatches(silent = false) {
   if (!silent) showToast('Refreshing…');
   try {
@@ -131,7 +141,6 @@ function updateMiniStats() {
   document.getElementById('msTotal').textContent  = all.length;
 }
 
-// ── Filters ────────────────────────────────────────────────
 function setFilter(f, el) {
   activeFilter = f;
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
@@ -142,12 +151,10 @@ function setFilter(f, el) {
 function applyFilters() {
   const q   = (document.getElementById('searchInput').value || '').toLowerCase().trim();
   let list  = window._allMatches || [];
-
   if      (activeFilter === 'upcoming')  list = list.filter(m => m.status !== 'Played');
   else if (activeFilter === 'played')    list = list.filter(m => m.status === 'Played');
   else if (activeFilter === 'knockout')  list = list.filter(m => m.isKO);
   else if (activeFilter !== 'all')       list = list.filter(m => m.group === activeFilter);
-
   if (q) {
     list = list.filter(m =>
       m.home.toLowerCase().includes(q)    ||
@@ -161,20 +168,14 @@ function applyFilters() {
   renderList(list);
 }
 
-// ── Render ─────────────────────────────────────────────────
 function renderList(matches) {
   const el = document.getElementById('matchList');
   if (!matches.length) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-txt">No matches found</div></div>`;
     return;
   }
-
-  // Group by date
   const byDate = {};
-  matches.forEach(m => {
-    (byDate[m.date || 'TBD'] = byDate[m.date || 'TBD'] || []).push(m);
-  });
-
+  matches.forEach(m => { (byDate[m.date || 'TBD'] = byDate[m.date || 'TBD'] || []).push(m); });
   let html = '';
   for (const [date, list] of Object.entries(byDate)) {
     html += `<div class="date-label">${formatDateLabel(date)}</div>`;
@@ -183,11 +184,8 @@ function renderList(matches) {
   el.innerHTML = html;
 }
 
-// ── Init ───────────────────────────────────────────────────
 window.onload = async function() {
-  // Inject score modal HTML from utils
   document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
-
   await initPageAuth({
     activePage: 'matches',
     onReady: async () => {
