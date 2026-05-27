@@ -6,12 +6,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
-   <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
-<link rel="shortcut icon" href="images/icon-192.png">
-<meta name="apple-mobile-web-app-title" content="WC2026">
-<meta name="theme-color" content="#0D1B3E">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <link rel="shortcut icon" href="images/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="WC2026">
+  <meta name="theme-color" content="#0D1B3E">
   <title>World Cup 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
@@ -20,11 +20,9 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
   <style>
-    /* Extra push for homepage content */
     .home-content-wrapper {
       padding-top: 12px;
     }
-    /* Make sync strip look clickable when retry is needed */
     .sync-inner[data-error="true"] {
       background: rgba(239,68,68,0.15);
       border-color: rgba(239,68,68,0.3);
@@ -38,7 +36,7 @@
 </head>
 <body>
 
-<!-- ══ LOADING SCREEN ══ -->
+<!-- LOADING SCREEN -->
 <div class="screen active" id="loadingScreen">
   <div class="screen-card" id="loadingBox">
     <span class="screen-trophy">🏆</span>
@@ -48,7 +46,7 @@
   </div>
 </div>
 
-<!-- ══ LOGIN SCREEN ══ -->
+<!-- LOGIN SCREEN -->
 <div class="screen" id="loginScreen">
   <div class="screen-card">
     <span class="screen-trophy">🏆</span>
@@ -58,7 +56,7 @@
   </div>
 </div>
 
-<!-- ══ MAIN APP ══ -->
+<!-- MAIN APP -->
 <div id="mainApp" style="display:none;">
   <div class="home-content-wrapper">
     <div class="home-header">
@@ -86,7 +84,6 @@
       </div>
     </div>
 
-    <!-- Clickable sync strip: retry on tap when error shown -->
     <div class="sync-strip">
       <div class="sync-inner" id="syncInner" onclick="retryLoadStats()">
         <div class="sync-dot"></div>
@@ -141,6 +138,9 @@
       <button class="signout-btn" onclick="doSignOut()">🚪 Sign Out</button>
     </div>
   </div>
+
+  <!-- Bottom nav spacer (prevents content from hiding behind fixed nav) -->
+  <div class="bottom-nav-spacer"></div>
 </div>
 
 <!-- Bottom nav -->
@@ -189,14 +189,12 @@ async function showMainApp() {
   await loadHomeStats();
 }
 
-// Improved loadHomeStats with better error handling and retry support
 async function loadHomeStats() {
   const syncInner = document.getElementById('syncInner');
   const syncLabel = document.getElementById('syncLabel');
   
-  // Reset error style
   syncInner.removeAttribute('data-error');
-  syncInner.style.cursor = 'pointer'; // always clickable for manual refresh
+  syncInner.style.cursor = 'pointer';
   syncLabel.textContent = 'Updating stats…';
   
   try {
@@ -229,24 +227,19 @@ async function loadHomeStats() {
     console.error('Stats load error:', e);
     syncLabel.textContent = '⚠️ Could not load data — tap to retry';
     syncInner.setAttribute('data-error', 'true');
-    // Keep placeholder values but show error state
     document.getElementById('statPlayed').textContent = '?';
     document.getElementById('statGoals').textContent  = '?';
     document.getElementById('statLeft').textContent   = '?';
   }
 }
 
-// Manual retry function attached to sync strip
 window.retryLoadStats = async function() {
   const syncInner = document.getElementById('syncInner');
   const syncLabel = document.getElementById('syncLabel');
   
-  // Prevent multiple rapid retries
   if (syncLabel.textContent.includes('Updating')) return;
   
-  // If we are in error state, try to refresh token before retrying
   if (syncInner.getAttribute('data-error') === 'true') {
-    // Attempt to re-authenticate silently
     try {
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
@@ -269,7 +262,6 @@ window.retryLoadStats = async function() {
       showToast('Retry failed', 'error');
     }
   } else {
-    // Normal retry
     await loadHomeStats();
     showToast('Refreshed');
   }
