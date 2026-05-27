@@ -21,19 +21,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
-  <style>
-    body {
-      padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
-    }
-    .bottom-nav-spacer {
-      height: calc(72px + 20px);
-      width: 100%;
-      pointer-events: none;
-    }
-    .content {
-      padding-bottom: 16px;
-    }
-  </style>
 </head>
 <body>
 
@@ -81,6 +68,7 @@
     <div class="loading-state"><div class="spinner"></div></div>
   </div>
 
+  <!-- Bottom nav spacer (prevents content from hiding behind fixed nav) -->
   <div class="bottom-nav-spacer"></div>
 
 </div>
@@ -188,7 +176,7 @@ window.onload = async function() {
     onReady: async () => {
       window._allMatches = await loadAllMatches();
       updateMiniStats();
-      buildChips();           // Generate colored chips
+      buildChips();
       applyFilters();
       showMainApp();
     }
