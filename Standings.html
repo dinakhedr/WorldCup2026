@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Standings · World Cup 2026</title>
+  <!-- PWA & Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <link rel="shortcut icon" href="images/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="WC2026">
+  <meta name="theme-color" content="#0D1B3E">
+  <!-- Fonts & Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="utils.js"></script>
+  <style>
+    /* Standings-specific styles (matching Groups.html) */
+    .group-standings {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      margin: 12px 12px 20px;
+      overflow-x: auto;
+    }
+    .group-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .group-name {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -0.3px;
+    }
+    .group-teams-list {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+    .standings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .standings-table th {
+      padding: 10px 5px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-3);
+      border-bottom: 1px solid var(--border);
+    }
+    .standings-table th:first-child { text-align: left; padding-left: 12px; }
+    .standings-table td {
+      padding: 10px 5px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-2);
+    }
+    .standings-table td:first-child {
+      text-align: left;
+      font-weight: 700;
+      color: var(--text);
+      padding-left: 12px;
+    }
+    .standings-table tr:last-child td { border-bottom: none; }
+    .qualify-cell {
+      font-weight: 900;
+      color: var(--green-mid);
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="screen active" id="loadingScreen">
+  <div class="screen-card" id="loadingBox">
+    <span class="screen-trophy">📊</span>
+    <div class="screen-title">Standings</div>
+    <div class="screen-sub" id="loadingMsg">Loading group standings…</div>
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display:none;">
+
+  <div class="page-header">
+    <div class="header-row">
+      <div class="header-left">
+        <a class="back-btn" href="Home.html">‹</a>
+        <div class="page-title">📊 Group Standings</div>
+      </div>
+      <div class="header-actions">
+        <button class="hdr-btn" onclick="syncStandings()" title="Refresh">🔄</button>
+      </div>
+    </div>
+    <div class="mini-stats">
+      <div class="mini-stat"><div class="mini-stat-val" id="totalMatches">—</div><div class="mini-stat-lbl">Group matches</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="playedMatches">—</div><div class="mini-stat-lbl">Played</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="groupsCount">12</div><div class="mini-stat-lbl">Groups</div></div>
+    </div>
+  </div>
+
+  <div id="standingsContainer" class="content" style="background: var(--surface-2);">
+    <div class="loading-state"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Bottom nav spacer (global CSS) -->
+  <div class="bottom-nav-spacer"></div>
+</div>
+
+<div id="scoreModalMount"></div>
+<div id="bottomNavMount"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+let allMatches = [];
+
+// Refresh standings when a score is saved elsewhere
+window._onScoreSaved = async function() { await refreshAll(); };
+
+// ── Compute standings for a group (identical to Groups.html) ──
+function computeGroupStandings(groupId, matches) {
+  const teams = GROUPS_TEAMS[groupId] || [];
+  const stats = {};
+  teams.forEach(team => {
+    stats[team] = { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0 };
+  });
+
+  matches.forEach(m => {
+    if (m.status !== 'Played') return;
+    const home = m.home;
+    const away = m.away;
+    if (!stats[home] || !stats[away]) return;
+
+    const hg = parseInt(m.homeScore) || 0;
+    const ag = parseInt(m.awayScore) || 0;
+
+    stats[home].played++;
+    stats[away].played++;
+    stats[home].gf += hg;
+    stats[home].ga += ag;
+    stats[away].gf += ag;
+    stats[away].ga += hg;
+
+    if (hg > ag) {
+      stats[home].wins++;
+      stats[away].losses++;
+      stats[home].points += 3;
+    } else if (ag > hg) {
+      stats[away].wins++;
+      stats[home].losses++;
+      stats[away].points += 3;
+    } else {
+      stats[home].draws++;
+      stats[away].draws++;
+      stats[home].points += 1;
+      stats[away].points += 1;
+    }
+  });
+
+  for (let team in stats) {
+    stats[team].gd = stats[team].gf - stats[team].ga;
+  }
+
+  let standings = teams.map(team => ({ team, ...stats[team] }));
+  standings.sort((a,b) => {
+    if (a.points !== b.points) return b.points - a.points;
+    if (a.gd !== b.gd) return b.gd - a.gd;
+    return b.gf - a.gf;
+  });
+  return standings;
+}
+
+// ── Render a group standings table ──
+function renderGroupStandings(groupId, standings) {
+  const color = GRP_COLORS[groupId] || { bg: '#f3f4f6', txt: '#374151', acc: '#6b7280' };
+  
+  let tableRows = '';
+  standings.forEach((team, idx) => {
+    const qualifyClass = (idx < 2) ? 'qualify-cell' : '';
+    tableRows += `<tr>
+      <td>${idx+1}</td>
+      <td style="text-align:left; font-weight:700;">${escHtml(team.team)}</td>
+      <td>${team.played}</td>
+      <td>${team.wins}</td>
+      <td>${team.draws}</td>
+      <td>${team.losses}</td>
+      <td>${team.gf}</td>
+      <td>${team.ga}</td>
+      <td>${team.gd}</td>
+      <td class="${qualifyClass}">${team.points}</td>
+    </tr>`;
+  });
+
+  return `
+    <div class="group-standings" style="border-left: 4px solid ${color.acc};">
+      <div class="group-header" style="background: ${color.bg}20;">
+        <div class="group-name" style="color: ${color.txt};">Group ${groupId}</div>
+        <div class="group-teams-list">${GROUPS_TEAMS[groupId].join(' · ')}</div>
+      </div>
+      <table class="standings-table">
+        <thead>
+          <tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ── Load all data and render all standings ──
+async function loadStandings() {
+  try {
+    allMatches = await loadAllMatches();
+    const groupMatches = allMatches.filter(m => !m.isKO);
+    const totalGroupMatches = groupMatches.length;
+    const playedGroupMatches = groupMatches.filter(m => m.status === 'Played').length;
+    document.getElementById('totalMatches').textContent = totalGroupMatches;
+    document.getElementById('playedMatches').textContent = playedGroupMatches;
+
+    let standingsHtml = '';
+    for (let g of ['A','B','C','D','E','F','G','H','I','J','K','L']) {
+      const matchesInGroup = groupMatches.filter(m => m.group === g);
+      const standings = computeGroupStandings(g, matchesInGroup);
+      standingsHtml += renderGroupStandings(g, standings);
+    }
+    document.getElementById('standingsContainer').innerHTML = standingsHtml;
+  } catch (err) {
+    console.error(err);
+    document.getElementById('standingsContainer').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load standings</div></div>`;
+    showToast('Failed to load standings', 'error');
+  }
+}
+
+async function refreshAll() {
+  showToast('Refreshing standings…');
+  await loadStandings();
+  showToast('✅ Updated');
+}
+
+async function syncStandings() {
+  await refreshAll();
+}
+
+// ── Page init ──
+window.onload = async function() {
+  document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
+  await initPageAuth({
+    activePage: 'standings',
+    onReady: async () => {
+      await loadStandings();
+      showMainApp();
+    }
+  });
+};
+</script>
+</body>
+</html>
