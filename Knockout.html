@@ -19,6 +19,220 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
+  <style>
+    /* ── Bracket layout ── */
+    .ko-wrap {
+      overflow-x: auto;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 0 8px;
+    }
+
+    /* The outer bracket flex row — grows as tall as needed */
+    .ko-bracket {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      width: max-content;
+      min-width: 100%;
+      padding: 0 10px 16px;
+      gap: 0;
+    }
+
+    /* One round column */
+    .ko-round {
+      display: flex;
+      flex-direction: column;
+      width: 168px;
+      flex-shrink: 0;
+    }
+    .ko-round-title {
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.45);
+      text-align: center;
+      padding: 0 6px 10px;
+      white-space: nowrap;
+    }
+    .ko-round-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* Each "slot" stretches evenly in the column */
+    .ko-slot {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      padding: 5px 6px;
+      position: relative;
+      min-height: 90px;
+    }
+
+    /* Match card inside a slot */
+    .ko-card {
+      background: var(--surface);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s;
+      position: relative;
+    }
+    .ko-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--border);
+      border-radius: 3px 0 0 3px;
+    }
+    .ko-card.played::before { background: var(--green-mid); }
+    .ko-card:active { transform: scale(0.97); }
+
+    .ko-card-meta {
+      padding: 5px 9px 3px 11px;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-3);
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ko-team {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 9px 4px 11px;
+      gap: 4px;
+      border-top: 1px solid var(--border);
+    }
+    .ko-team:first-of-type { border-top: none; }
+
+    .ko-team-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ko-team-name.tbd {
+      color: var(--text-3);
+      font-weight: 600;
+      font-style: normal; /* never italic */
+    }
+    .ko-team-name.winner { color: var(--green-mid); }
+
+    .ko-team-score {
+      font-size: 13px;
+      font-weight: 900;
+      color: var(--text-3);
+      min-width: 14px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .ko-team-score.winner { color: var(--green-mid); }
+
+    .ko-card-venue {
+      font-size: 8px;
+      color: var(--text-3);
+      padding: 2px 9px 5px 11px;
+      border-top: 1px solid var(--border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ko-card.played .ko-card-venue { color: #059669; }
+
+    /* Penalty line */
+    .ko-pen {
+      font-size: 8px;
+      font-weight: 700;
+      color: #b45309;
+      padding: 1px 9px 4px 11px;
+      border-top: none;
+    }
+
+    /* ── Connector column between rounds ── */
+    .ko-connector {
+      width: 28px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      /* title spacer — matches ko-round-title height */
+      padding-top: 27px;
+    }
+
+    /* Each connector pair: top half + bottom half + horizontal stub */
+    .ko-conn-pair {
+      flex: 2; /* matches 2 left slots → 1 right slot */
+      display: flex;
+      flex-direction: row;
+    }
+    .ko-conn-lines {
+      width: 14px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .ko-conn-top {
+      flex: 1;
+      border-right: 2px solid rgba(255,255,255,0.18);
+      border-bottom: 2px solid rgba(255,255,255,0.18);
+      border-bottom-right-radius: 4px;
+    }
+    .ko-conn-bot {
+      flex: 1;
+      border-right: 2px solid rgba(255,255,255,0.18);
+      border-top: 2px solid rgba(255,255,255,0.18);
+      border-top-right-radius: 4px;
+    }
+    .ko-conn-stub {
+      width: 14px;
+      border-top: 2px solid rgba(255,255,255,0.18);
+      align-self: center;
+      flex-shrink: 0;
+    }
+
+    /* ── Bronze & Final section (vertical below bracket) ── */
+    .ko-finals-row {
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      padding: 0 10px 16px;
+      width: max-content;
+      min-width: 100%;
+    }
+    .ko-finals-block {
+      width: 168px;
+      flex-shrink: 0;
+    }
+    .ko-finals-title {
+      font-size: 9px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.45);
+      padding: 0 6px 10px;
+      white-space: nowrap;
+    }
+
+    /* Divider between main bracket and finals */
+    .ko-divider {
+      margin: 4px 10px 12px;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+  </style>
 </head>
 <body>
 
@@ -50,8 +264,7 @@
     </div>
   </div>
 
-  <!-- Bracket scroll area -->
-  <div class="bracket-outer" id="bracketOuter">
+  <div class="ko-wrap" id="koWrap">
     <div class="loading-state"><div class="spinner"></div></div>
   </div>
 
@@ -65,213 +278,175 @@
 <script>
 window._onScoreSaved = async function() { await loadKnockout(); };
 
-const ROUND_ORDER = [
-  'Round of 32',
-  'Round of 16',
-  'Quarter-Final',
-  'Semi-Final',
-  'Bronze Medal',
-  'Final'
-];
-
-// How many R32 matches feed into each subsequent round match (pair groupings)
-// R32: 16 matches → R16: 8 → QF: 4 → SF: 2 → Final: 1  (Bronze is separate)
-const ROUND_PAIRS = {
-  'Round of 32': 1,      // base unit
-  'Round of 16': 2,      // every 2 R32 matches feed 1 R16
-  'Quarter-Final': 4,
-  'Semi-Final': 8,
-  'Bronze Medal': 0,     // standalone
-  'Final': 0,            // standalone
-};
-
-function buildMatchCard(m) {
-  if (!m) return '<div class="bkt-match" style="visibility:hidden;min-height:72px;"></div>';
+/* ── Build a single match card ── */
+function buildKOCard(m) {
+  if (!m) {
+    return `<div class="ko-card" style="opacity:0;pointer-events:none;">
+      <div class="ko-card-meta">—</div>
+      <div class="ko-team"><span class="ko-team-name tbd">TBD</span></div>
+      <div class="ko-team"><span class="ko-team-name tbd">TBD</span></div>
+      <div class="ko-card-venue">—</div>
+    </div>`;
+  }
 
   const played  = m.status === 'Played';
   const homeWin = played && m.winner === m.home;
   const awayWin = played && m.winner === m.away;
-  const isTBD   = m.home.startsWith('TBD') || m.home === '';
+  const homeTBD = m.home.startsWith('TBD');
+  const awayTBD = m.away.startsWith('TBD');
 
-  const homeName  = escHtml(m.home  || 'TBD');
-  const awayName  = escHtml(m.away  || 'TBD');
-  const homeClass = `bkt-team-name${isTBD ? ' tbd' : homeWin ? ' winner' : ''}`;
-  const awayClass = `bkt-team-name${isTBD ? ' tbd' : awayWin ? ' winner' : ''}`;
+  const homeNameClass = `ko-team-name${homeTBD ? ' tbd' : homeWin ? ' winner' : ''}`;
+  const awayNameClass = `ko-team-name${awayTBD ? ' tbd' : awayWin ? ' winner' : ''}`;
+  const homeScoreClass = `ko-team-score${homeWin ? ' winner' : ''}`;
+  const awayScoreClass = `ko-team-score${awayWin ? ' winner' : ''}`;
 
-  const homeScore = played ? `<span class="bkt-team-score${homeWin ? ' winner' : ''}">${m.homeScore}</span>` : '';
-  const awayScore = played ? `<span class="bkt-team-score${awayWin ? ' winner' : ''}">${m.awayScore}</span>` : '';
+  const homeScore = played ? `<span class="${homeScoreClass}">${m.homeScore}</span>` : '';
+  const awayScore = played ? `<span class="${awayScoreClass}">${m.awayScore}</span>` : '';
 
-  let penLine = '';
-  if (played && m.penH !== '' && m.penA !== '') {
-    penLine = `<div class="bkt-match-venue" style="border-top:none;color:#b45309;">Pen ${m.penH}–${m.penA}</div>`;
-  }
+  const penLine = (played && m.penH !== '' && m.penA !== '')
+    ? `<div class="ko-pen">Pen ${m.penH}–${m.penA}</div>` : '';
 
-  const venueStr = m.venue ? `📍 ${m.city}` : '';
+  const metaLine = `${formatTime12(m.time)} · ${m.date}`;
+  const venue = m.city ? `📍 ${m.city}` : '';
 
   return `
-    <div class="bkt-match${played ? ' played' : ''}" onclick="openScoreModal(${m.num})">
-      <div class="bkt-match-time">${formatTime12(m.time)} · ${m.date}</div>
-      <div class="bkt-team">
-        <span class="${homeClass}">${homeName}</span>
+    <div class="ko-card${played ? ' played' : ''}" onclick="openScoreModal(${m.num})">
+      <div class="ko-card-meta">${metaLine}</div>
+      <div class="ko-team">
+        <span class="${homeNameClass}">${escHtml(m.home || 'TBD')}</span>
         ${homeScore}
       </div>
-      <div class="bkt-team">
-        <span class="${awayClass}">${awayName}</span>
+      <div class="ko-team">
+        <span class="${awayNameClass}">${escHtml(m.away || 'TBD')}</span>
         ${awayScore}
       </div>
       ${penLine}
-      ${venueStr ? `<div class="bkt-match-venue">${venueStr}</div>` : ''}
+      ${venue ? `<div class="ko-card-venue">${venue}</div>` : ''}
     </div>`;
 }
 
-function buildConnector(count) {
-  // count = number of match pairs to connect (each pair = 2 matches → 1 feeder)
-  let html = '';
-  for (let i = 0; i < count; i++) {
-    html += `
-      <div style="display:flex;flex-direction:row;flex:1;min-height:0;">
-        <div style="width:24px;display:flex;flex-direction:column;flex:1;">
-          <div style="flex:1;border-right:2px solid var(--border);border-bottom:2px solid var(--border);"></div>
-          <div style="flex:1;border-right:2px solid var(--border);border-top:2px solid var(--border);"></div>
+/* ── Build a connector column (pairCount pairs, each spanning 2 left slots → 1 right slot) ── */
+function buildConnector(pairCount) {
+  let pairs = '';
+  for (let i = 0; i < pairCount; i++) {
+    pairs += `
+      <div class="ko-conn-pair">
+        <div class="ko-conn-lines">
+          <div class="ko-conn-top"></div>
+          <div class="ko-conn-bot"></div>
         </div>
-        <div style="width:12px;border-top:2px solid var(--border);align-self:center;"></div>
+        <div class="ko-conn-stub"></div>
       </div>`;
   }
-  return html;
+  return `<div class="ko-connector">${pairs}</div>`;
 }
 
+/* ── Main render function ── */
 function renderBracket(matches) {
-  const outer = document.getElementById('bracketOuter');
+  const wrap = document.getElementById('koWrap');
 
   if (!matches.length) {
-    outer.innerHTML = `<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-txt">No knockout matches found</div></div>`;
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-txt">No knockout matches found</div></div>`;
     return;
   }
 
   // Group by round
   const byRound = {};
-  ROUND_ORDER.forEach(r => byRound[r] = []);
+  ['Round of 32','Round of 16','Quarter-Final','Semi-Final','Bronze Medal','Final']
+    .forEach(r => byRound[r] = []);
   matches.forEach(m => { if (byRound[m.group]) byRound[m.group].push(m); });
-  ROUND_ORDER.forEach(r => byRound[r].sort((a,b) => a.num - b.num));
+  ['Round of 32','Round of 16','Quarter-Final','Semi-Final'].forEach(r =>
+    byRound[r].sort((a,b) => a.num - b.num));
 
-  // Rounds to render left-to-right (R32→R16→QF→SF→Final), then Bronze below
-  const mainRounds  = ['Round of 32','Round of 16','Quarter-Final','Semi-Final','Final'];
-  const bronzeRound = ['Bronze Medal'];
+  const r32 = byRound['Round of 32'];   // 16 matches
+  const r16 = byRound['Round of 16'];   //  8 matches
+  const qf  = byRound['Quarter-Final']; //  4 matches
+  const sf  = byRound['Semi-Final'];    //  2 matches
 
-  // ---------- Build main bracket columns ----------
-  const r32Count = byRound['Round of 32'].length || 16;
+  /* ── Build the 4-round main bracket ──
+     Each round column contains N slots; slots stretch equally.
+     R32: 16 slots, R16: 8 slots (each = 2× R32 height), QF: 4 slots (4×), SF: 2 slots (8×)
+     We use flex on the round body and flex:1 on each slot so they auto-distribute.
+     The connector columns also use flex pairs that span 2 left-slots each.
+  */
 
-  // Heights: each R32 match occupies 1 unit; higher rounds double spacing
-  function buildRoundColumn(roundName, matchesInRound, unitHeight) {
-    const cards = matchesInRound.map(m => buildMatchCard(m)).join('');
-    // Wrap each card in a flex cell of the right height
-    const wrappedCards = matchesInRound.map(m =>
-      `<div style="display:flex;align-items:center;min-height:${unitHeight}px;flex-shrink:0;">${buildMatchCard(m)}</div>`
-    ).join('');
+  function roundColumn(title, matchArr, slotsCount) {
+    // Pad matchArr to slotsCount with nulls if needed
+    const padded = [...matchArr];
+    while (padded.length < slotsCount) padded.push(null);
+
+    const slots = padded.map(m => `
+      <div class="ko-slot">${buildKOCard(m)}</div>
+    `).join('');
 
     return `
-      <div class="bracket-round" style="flex-shrink:0;width:200px;">
-        <div class="bracket-round-header">${roundName}</div>
-        <div class="bracket-slots" style="display:flex;flex-direction:column;">
-          ${wrappedCards}
-        </div>
+      <div class="ko-round">
+        <div class="ko-round-title">${title}</div>
+        <div class="ko-round-body">${slots}</div>
       </div>`;
   }
 
-  // Unit height = card height + gap. We use ~92px per R32 slot
-  const BASE = 92;
+  // The total number of base slots = number of R32 matches (16)
+  // Each higher round has half as many slots
+  const baseSlots = r32.length || 16;
 
-  let html = `<div class="bracket-scroll" style="align-items:flex-start;padding-bottom:20px;">`;
+  let bracketHtml = `<div class="ko-bracket">`;
+  bracketHtml += roundColumn('Round of 32',  r32, baseSlots);
+  bracketHtml += buildConnector(baseSlots / 2);      // 8 pairs
+  bracketHtml += roundColumn('Round of 16',  r16, baseSlots / 2);
+  bracketHtml += buildConnector(baseSlots / 4);      // 4 pairs
+  bracketHtml += roundColumn('Quarter-Final', qf, baseSlots / 4);
+  bracketHtml += buildConnector(baseSlots / 8);      // 2 pairs
+  bracketHtml += roundColumn('Semi-Final',   sf, baseSlots / 8);
+  bracketHtml += `</div>`; // ko-bracket
 
-  // R32
-  const r32Matches = byRound['Round of 32'];
-  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
-    <div class="bracket-round-header">Round of 32</div>
-    <div style="display:flex;flex-direction:column;">
-      ${r32Matches.map(m => `<div style="min-height:${BASE}px;display:flex;align-items:center;">${buildMatchCard(m)}</div>`).join('')}
-    </div>
-  </div>`;
+  /* ── Finals row (SF→Final connector + Final card, Bronze separate) ── */
+  const finalMatch  = byRound['Final'][0]  || null;
+  const bronzeMatch = byRound['Bronze Medal'][0] || null;
 
-  // Connector R32→R16
-  const r16Count = byRound['Round of 16'].length || 8;
-  html += buildConnectorColumn(r32Matches.length, 2, BASE);
+  // SF→Final: the 2 SF matches connect to the 1 Final
+  // We show this as a clean separate row to avoid the vertical height problem
+  bracketHtml += `<div class="ko-divider"></div>`;
+  bracketHtml += `<div class="ko-finals-row">`;
 
-  // R16
-  const r16Matches = byRound['Round of 16'];
-  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
-    <div class="bracket-round-header">Round of 16</div>
-    <div style="display:flex;flex-direction:column;">
-      ${r16Matches.map(m => `<div style="min-height:${BASE*2}px;display:flex;align-items:center;">${buildMatchCard(m)}</div>`).join('')}
-    </div>
-  </div>`;
-
-  // Connector R16→QF
-  html += buildConnectorColumn(r16Matches.length, 2, BASE * 2);
-
-  // QF
-  const qfMatches = byRound['Quarter-Final'];
-  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
-    <div class="bracket-round-header">Quarter-Final</div>
-    <div style="display:flex;flex-direction:column;">
-      ${qfMatches.map(m => `<div style="min-height:${BASE*4}px;display:flex;align-items:center;">${buildMatchCard(m)}</div>`).join('')}
-    </div>
-  </div>`;
-
-  // Connector QF→SF
-  html += buildConnectorColumn(qfMatches.length, 2, BASE * 4);
-
-  // SF
-  const sfMatches = byRound['Semi-Final'];
-  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
-    <div class="bracket-round-header">Semi-Final</div>
-    <div style="display:flex;flex-direction:column;">
-      ${sfMatches.map(m => `<div style="min-height:${BASE*8}px;display:flex;align-items:center;">${buildMatchCard(m)}</div>`).join('')}
-    </div>
-  </div>`;
-
-  // Connector SF→Final
-  html += buildConnectorColumn(sfMatches.length, 2, BASE * 8);
-
-  // Final
-  const finalMatch = byRound['Final'];
-  const totalH = r32Matches.length * BASE;
-  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
-    <div class="bracket-round-header">🏆 Final</div>
-    <div style="height:${totalH}px;display:flex;align-items:center;">
-      ${buildMatchCard(finalMatch[0] || null)}
-    </div>
-  </div>`;
-
-  html += `</div>`; // close bracket-scroll
-
-  // Bronze medal — separate row below
-  const bronzeMatch = byRound['Bronze Medal'];
-  if (bronzeMatch.length) {
-    html += `<div style="padding:4px 16px 0;display:flex;align-items:center;gap:12px;">
-      <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);white-space:nowrap;">🥉 Bronze Medal</div>
-      <div style="width:196px;">${buildMatchCard(bronzeMatch[0])}</div>
+  // SF column (just the 2 cards, small)
+  bracketHtml += `
+    <div class="ko-finals-block">
+      <div class="ko-finals-title">Semi-Final</div>
+      ${sf.map(m => `<div style="padding:4px 6px;">${buildKOCard(m)}</div>`).join('')}
     </div>`;
-  }
 
-  outer.innerHTML = html;
-}
-
-// Build the connector SVG-like column between two rounds
-// totalMatches = matches in the LEFT round, groupSize = how many left matches → 1 right match
-function buildConnectorColumn(totalMatches, groupSize, unitHeight) {
-  const pairCount = Math.ceil(totalMatches / groupSize);
-  let rows = '';
-  for (let i = 0; i < pairCount; i++) {
-    rows += `
-      <div style="display:flex;flex-direction:row;height:${unitHeight * groupSize}px;flex-shrink:0;">
-        <div style="width:20px;display:flex;flex-direction:column;">
-          <div style="flex:1;border-right:2px solid var(--border);border-bottom:2px solid var(--border);border-bottom-right-radius:3px;"></div>
-          <div style="flex:1;border-right:2px solid var(--border);border-top:2px solid var(--border);border-top-right-radius:3px;"></div>
+  // Connector
+  bracketHtml += `
+    <div style="width:28px;flex-shrink:0;padding-top:24px;display:flex;flex-direction:column;">
+      <div style="flex:1;display:flex;flex-direction:row;">
+        <div style="width:14px;display:flex;flex-direction:column;flex:1;">
+          <div style="flex:1;border-right:2px solid rgba(255,255,255,0.18);border-bottom:2px solid rgba(255,255,255,0.18);border-bottom-right-radius:4px;"></div>
+          <div style="flex:1;border-right:2px solid rgba(255,255,255,0.18);border-top:2px solid rgba(255,255,255,0.18);border-top-right-radius:4px;"></div>
         </div>
-        <div style="width:12px;border-top:2px solid var(--border);align-self:center;"></div>
+        <div style="width:14px;border-top:2px solid rgba(255,255,255,0.18);align-self:center;"></div>
+      </div>
+    </div>`;
+
+  // Final column
+  bracketHtml += `
+    <div class="ko-finals-block">
+      <div class="ko-finals-title">🏆 Final</div>
+      <div style="padding:4px 6px;">${buildKOCard(finalMatch)}</div>
+    </div>`;
+
+  // Bronze column
+  if (bronzeMatch) {
+    bracketHtml += `
+      <div class="ko-finals-block" style="margin-left:12px;">
+        <div class="ko-finals-title">🥉 Bronze</div>
+        <div style="padding:4px 6px;">${buildKOCard(bronzeMatch)}</div>
       </div>`;
   }
-  return `<div style="flex-shrink:0;width:32px;padding-top:28px;">${rows}</div>`;
+
+  bracketHtml += `</div>`; // ko-finals-row
+
+  wrap.innerHTML = bracketHtml;
 }
 
 async function loadKnockout() {
@@ -291,14 +466,15 @@ async function loadKnockout() {
     renderBracket(koMatches);
   } catch(err) {
     console.error(err);
-    document.getElementById('bracketOuter').innerHTML =
+    document.getElementById('koWrap').innerHTML =
       `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load knockout stage</div></div>`;
     showToast('Failed to load knockout matches', 'error');
   }
 }
 
 async function syncKnockout() {
-  showToast('Refreshing knockout bracket…');
+  showToast('Refreshing…');
+  await loadAllMatches(true);   // force cache bypass
   await loadKnockout();
   showToast('✅ Updated');
 }
