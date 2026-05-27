@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Today's Matches · World Cup 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="utils.js"></script>
+</head>
+<body>
+
+<!-- ══ LOADING SCREEN ══ -->
+<div class="screen active" id="loadingScreen">
+  <div class="screen-card" id="loadingBox">
+    <span class="screen-trophy">📅</span>
+    <div class="screen-title">Today's Matches</div>
+    <div class="screen-sub" id="loadingMsg">Loading schedule…</div>
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="mainApp" style="display:none;">
+
+  <!-- Sticky header -->
+  <div class="page-header">
+    <div class="header-row">
+      <div class="header-left">
+        <a class="back-btn" href="Home.html">‹</a>
+        <div class="page-title">📅 Today's Matches</div>
+      </div>
+      <div class="header-actions">
+        <button class="hdr-btn" onclick="syncTodayMatches()" title="Refresh">🔄</button>
+      </div>
+    </div>
+
+    <!-- Mini stats for today -->
+    <div class="mini-stats">
+      <div class="mini-stat"><div class="mini-stat-val" id="todayCount">—</div><div class="mini-stat-lbl">Matches today</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="todayPlayed">—</div><div class="mini-stat-lbl">Played</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="todayUpcoming">—</div><div class="mini-stat-lbl">Upcoming</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="todayDate">—</div><div class="mini-stat-lbl">Cairo date</div></div>
+    </div>
+  </div>
+
+  <!-- Content: today's match list -->
+  <div class="content" id="todayMatchList">
+    <div class="loading-state"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<!-- Score modal mount (shared) -->
+<div id="scoreModalMount"></div>
+
+<!-- Bottom navigation -->
+<div id="bottomNavMount"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Page state ─────────────────────────────────────────
+  let todayMatches = [];
+  let currentTodayDate = '';
+
+  // Expose to utils.js score modal callback
+  window._onScoreSaved = async function() { await syncTodayMatches(true); };
+
+  // ── Load & display today's matches ──────────────────────
+  async function loadTodayMatches() {
+    try {
+      const allMatches = await loadAllMatches();
+      const todayCairo = getTodayCairo();
+      currentTodayDate = todayCairo;
+
+      // Filter matches for today
+      todayMatches = allMatches.filter(m => m.date === todayCairo);
+
+      // Update mini stats
+      const played = todayMatches.filter(m => m.status === 'Played').length;
+      const upcoming = todayMatches.filter(m => m.status !== 'Played').length;
+      document.getElementById('todayCount').textContent = todayMatches.length;
+      document.getElementById('todayPlayed').textContent = played;
+      document.getElementById('todayUpcoming').textContent = upcoming;
+      document.getElementById('todayDate').textContent = todayCairo;
+
+      renderTodayMatches();
+      return todayMatches;
+    } catch (err) {
+      console.error('Failed to load today matches:', err);
+      document.getElementById('todayMatchList').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <div class="empty-txt">Could not load matches<br>Tap refresh to retry</div>
+        </div>`;
+      throw err;
+    }
+  }
+
+  function renderTodayMatches() {
+    const container = document.getElementById('todayMatchList');
+    if (!todayMatches.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🏖️</div>
+          <div class="empty-txt">No matches scheduled for today<br>${currentTodayDate}</div>
+        </div>`;
+      return;
+    }
+
+    // Sort by time (earliest first)
+    const sorted = [...todayMatches].sort((a,b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+
+    let html = `<div class="date-label">📆 ${formatDateLabel(currentTodayDate)}</div>`;
+    sorted.forEach(m => {
+      // We pass showDate = false because date is already in the header
+      html += matchCardHTML(m, { showDate: false, onclick: `openScoreModal(${m.num})` });
+    });
+    container.innerHTML = html;
+  }
+
+  // ── Sync (refresh) function ─────────────────────────────
+  async function syncTodayMatches(silent = false) {
+    if (!silent) showToast('Refreshing today\'s matches…');
+    try {
+      await loadTodayMatches();
+      if (!silent) showToast('✅ Updated');
+    } catch(e) {
+      console.error(e);
+      if (!silent) showToast('Refresh failed', 'error');
+    }
+  }
+
+  // ── Page initialisation (uses shared auth) ──────────────
+  window.onload = async function() {
+    // Inject score modal HTML from utils
+    document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
+
+    await initPageAuth({
+      activePage: 'today',
+      onReady: async () => {
+        await loadTodayMatches();
+        showMainApp();
+      }
+    });
+  };
+</script>
+</body>
+</html>
