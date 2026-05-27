@@ -8,19 +8,19 @@
 
 /* ── Design Tokens ── */
 :root {
-  --green-deep:   #092E18;
-  --green-dark:   #0D3D22;
-  --green-mid:    #1B6E3F;
-  --green-light:  #2D9A5A;
-  --green-pale:   #D8F3DC;
+  --green-deep:   #0A1530;
+  --green-dark:   #0D1B3E;
+  --green-mid:    #1e40af;
+  --green-light:  #3b82f6;
+  --green-pale:   #dbeafe;
   --gold:         #F4C430;
   --gold-dark:    #C9A012;
   --surface:      #ffffff;
-  --surface-2:    #f4f9f6;
-  --border:       #ddeee4;
+  --surface-2:    #f0f5ff;
+  --border:       #dde8f9;
   --text:         #0D1F14;
-  --text-2:       #3d6b50;
-  --text-3:       #8aaa97;
+  --text-2:       #2d4a8a;
+  --text-3:       #7a90c4;
   --success:      #10b981;
   --danger:       #ef4444;
   --warning:      #f59e0b;
