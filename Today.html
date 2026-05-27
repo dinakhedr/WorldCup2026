@@ -22,32 +22,12 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
   <style>
-    /* Styled date input (replaces chip + hidden input) */
+    /* Date picker styles (only for Today page) */
     .date-picker-wrap {
       margin: 8px 16px 4px;
       display: flex;
       justify-content: center;
     }
-    .date-selector {
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 40px;
-      padding: 8px 20px;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--gold);
-      cursor: pointer;
-      transition: all 0.12s;
-      /* Make it look like a button but actually it's a <input type="date"> */
-    }
-    .date-selector:active {
-      transform: scale(0.97);
-      background: rgba(255,255,255,0.15);
-    }
-    /* Style the native date input to look exactly like the chip */
     .date-input-native {
       background: rgba(255,255,255,0.1);
       border: 1px solid rgba(255,255,255,0.2);
@@ -65,14 +45,6 @@
     .date-input-native::-webkit-calendar-picker-indicator {
       filter: invert(0.8);
       cursor: pointer;
-    }
-    .bottom-nav-spacer {
-      height: calc(72px + 20px);
-      width: 100%;
-      pointer-events: none;
-    }
-    .content {
-      padding-bottom: 16px;
     }
   </style>
 </head>
@@ -121,6 +93,7 @@
     <div class="loading-state"><div class="spinner"></div></div>
   </div>
 
+  <!-- Bottom nav spacer (prevents content from hiding behind fixed nav) -->
   <div class="bottom-nav-spacer"></div>
 
 </div>
@@ -131,13 +104,11 @@
 
 <script>
 let allMatches = [];
-let selectedDate = '';      // format DD-MMM-YY (e.g., "14-Jun-26")
-let selectedDateISO = '';   // for date picker: YYYY-MM-DD
+let selectedDate = '';
+let selectedDateISO = '';
 
-// ── Expose to score modal refresh ──
 window._onScoreSaved = async function() { await loadDataAndRefresh(); };
 
-// ── Convert DD-MMM-YY to YYYY-MM-DD for date picker ──
 function toISODate(dateStr) {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
@@ -151,7 +122,6 @@ function toISODate(dateStr) {
   return `${year}-${month}-${day}`;
 }
 
-// ── Convert YYYY-MM-DD to DD-MMM-YY ──
 function fromISODate(isoStr) {
   if (!isoStr) return '';
   const date = new Date(isoStr);
@@ -163,7 +133,6 @@ function fromISODate(isoStr) {
   return `${d}-${m}-${y}`;
 }
 
-// ── Get today's Cairo date (DD-MMM-YY) ──
 function getTodayCairoFormatted() {
   const now = new Date();
   const cairo = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
@@ -174,15 +143,12 @@ function getTodayCairoFormatted() {
   return `${d}-${m}-${y}`;
 }
 
-// ── Load all matches, then update for selected date ──
 async function loadDataAndRefresh() {
   try {
     allMatches = await loadAllMatches();
     if (!selectedDate) {
-      // Set default to today
       selectedDate = getTodayCairoFormatted();
       selectedDateISO = toISODate(selectedDate);
-      // Update date picker value
       const datePicker = document.getElementById('datePickerInput');
       if (datePicker) datePicker.value = selectedDateISO;
     }
@@ -199,7 +165,6 @@ async function loadDataAndRefresh() {
 }
 
 function updateForSelectedDate() {
-  // Filter matches for selected date
   const matchesOnDate = allMatches.filter(m => m.date === selectedDate);
   const played = matchesOnDate.filter(m => m.status === 'Played').length;
   const upcoming = matchesOnDate.filter(m => m.status !== 'Played').length;
@@ -208,7 +173,6 @@ function updateForSelectedDate() {
   document.getElementById('todayPlayed').textContent = played;
   document.getElementById('todayUpcoming').textContent = upcoming;
   
-  // Render matches
   renderMatchesList(matchesOnDate, selectedDate);
 }
 
@@ -222,7 +186,6 @@ function renderMatchesList(matches, date) {
       </div>`;
     return;
   }
-  // Sort by time
   const sorted = [...matches].sort((a,b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
   let html = `<div class="date-label">📆 ${formatDateLabel(date)}</div>`;
   sorted.forEach(m => {
@@ -231,12 +194,10 @@ function renderMatchesList(matches, date) {
   container.innerHTML = html;
 }
 
-// ── Date picker listener ──
 function setupDatePicker() {
   const datePicker = document.getElementById('datePickerInput');
   if (!datePicker) return;
   
-  // Set initial value to today's Cairo date in ISO format
   const todayISO = toISODate(getTodayCairoFormatted());
   datePicker.value = todayISO;
   selectedDateISO = todayISO;
@@ -252,7 +213,6 @@ function setupDatePicker() {
   });
 }
 
-// ── Refresh (manual) ──
 async function syncTodayMatches() {
   showToast('Refreshing…');
   try {
@@ -263,7 +223,6 @@ async function syncTodayMatches() {
   }
 }
 
-// ── Page init ──
 window.onload = async function() {
   document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
   await initPageAuth({
