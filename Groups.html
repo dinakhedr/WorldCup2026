@@ -77,16 +77,13 @@
       font-weight: 900;
       color: var(--green-mid);
     }
-    .group-matches {
-      margin-top: 8px;
-      padding: 0 12px 12px;
+    .bottom-nav-spacer {
+      height: calc(72px + 20px);
+      width: 100%;
+      pointer-events: none;
     }
-    .section-title-sm {
-      font-size: 12px;
-      font-weight: 900;
-      color: var(--text-2);
-      padding: 8px 4px 4px;
-      letter-spacing: 0.03em;
+    .content {
+      padding-bottom: 16px;
     }
   </style>
 </head>
@@ -135,9 +132,8 @@
 
 <script>
 let allMatches = [];
-let groupsData = {};
 
-// ── Expose score modal callback ──
+// ── Expose score modal callback (refresh standings after score change) ──
 window._onScoreSaved = async function() { await refreshAll(); };
 
 // ── Compute standings for a group ──
@@ -195,17 +191,16 @@ function computeGroupStandings(groupId, matches) {
   return standings;
 }
 
-// ── Render group block ──
-function renderGroup(groupId, standings, matches) {
+// ── Render group block (standings table only – no match cards) ──
+function renderGroup(groupId, standings) {
   const color = GRP_COLORS[groupId] || { bg: '#f3f4f6', txt: '#374151', acc: '#6b7280' };
-  const groupMatches = matches.filter(m => m.group === groupId && !m.isKO);
   
   let tableRows = '';
   standings.forEach((team, idx) => {
     const qualifyClass = (idx < 2) ? 'qualify-cell' : '';
     tableRows += `<tr>
       <td>${idx+1}</td>
-      <td style="text-align:left; font-weight:700;">${team.team}</td>
+      <td style="text-align:left; font-weight:700;">${escHtml(team.team)}</td>
       <td>${team.played}</td>
       <td>${team.wins}</td>
       <td>${team.draws}</td>
@@ -216,14 +211,6 @@ function renderGroup(groupId, standings, matches) {
       <td class="${qualifyClass}">${team.points}</td>
     </tr>`;
   });
-
-  let matchesHtml = '';
-  if (groupMatches.length) {
-    matchesHtml = `<div class="section-title-sm">📋 Group Matches</div>`;
-    groupMatches.forEach(m => {
-      matchesHtml += matchCardHTML(m, { showDate: true, onclick: `openScoreModal(${m.num})` });
-    });
-  }
 
   return `
     <div class="group-standings" style="border-left: 4px solid ${color.acc};">
@@ -237,12 +224,11 @@ function renderGroup(groupId, standings, matches) {
         </thead>
         <tbody>${tableRows}</tbody>
       </table>
-      ${matchesHtml}
     </div>
   `;
 }
 
-// ── Load all data and render groups ──
+// ── Load all data and render groups (no matches after tables) ──
 async function loadGroups() {
   try {
     allMatches = await loadAllMatches();
@@ -256,7 +242,7 @@ async function loadGroups() {
     for (let g of ['A','B','C','D','E','F','G','H','I','J','K','L']) {
       const matchesInGroup = groupMatches.filter(m => m.group === g);
       const standings = computeGroupStandings(g, matchesInGroup);
-      groupsHtml += renderGroup(g, standings, matchesInGroup);
+      groupsHtml += renderGroup(g, standings);
     }
     document.getElementById('groupsContainer').innerHTML = groupsHtml;
   } catch (err) {
