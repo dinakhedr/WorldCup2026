@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Knockout Stage · World Cup 2026</title>
+  <!-- PWA & Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <link rel="shortcut icon" href="images/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="WC2026">
+  <meta name="theme-color" content="#0D1B3E">
+  <!-- Fonts & Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="utils.js"></script>
+  <style>
+    /* Knockout bracket layout */
+    .bracket {
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+      padding: 16px 8px;
+      gap: 24px;
+    }
+    .round {
+      min-width: 220px;
+      flex-shrink: 0;
+    }
+    .round-title {
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-3);
+      text-align: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .matches-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    /* Compact match card for bracket */
+    .bracket-match {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.12s;
+    }
+    .bracket-match:active {
+      transform: scale(0.98);
+    }
+    .bracket-match.played {
+      background: #f8fef9;
+    }
+    .bracket-match .card-inner {
+      padding: 10px 12px;
+    }
+    .bracket-match .teams-row {
+      gap: 6px;
+    }
+    .bracket-match .team-name {
+      font-size: 12px;
+    }
+    .bracket-match .score-digit {
+      font-size: 14px;
+    }
+    .bracket-match .score-box {
+      min-width: 50px;
+      padding: 3px 8px;
+    }
+    .bottom-nav-spacer {
+      height: calc(72px + 20px);
+      width: 100%;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="screen active" id="loadingScreen">
+  <div class="screen-card" id="loadingBox">
+    <span class="screen-trophy">⚡</span>
+    <div class="screen-title">Knockout Stage</div>
+    <div class="screen-sub" id="loadingMsg">Loading bracket…</div>
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display:none;">
+
+  <div class="page-header">
+    <div class="header-row">
+      <div class="header-left">
+        <a class="back-btn" href="Home.html">‹</a>
+        <div class="page-title">⚡ Knockout Stage</div>
+      </div>
+      <div class="header-actions">
+        <button class="hdr-btn" onclick="syncKnockout()" title="Refresh">🔄</button>
+      </div>
+    </div>
+    <div class="mini-stats">
+      <div class="mini-stat"><div class="mini-stat-val" id="totalKO">—</div><div class="mini-stat-lbl">Matches</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="playedKO">—</div><div class="mini-stat-lbl">Played</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="remainingKO">—</div><div class="mini-stat-lbl">Remaining</div></div>
+    </div>
+  </div>
+
+  <div class="bracket" id="bracketContainer">
+    <div class="loading-state"><div class="spinner"></div></div>
+  </div>
+
+  <div class="bottom-nav-spacer"></div>
+</div>
+
+<div id="scoreModalMount"></div>
+<div id="bottomNavMount"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+let allKnockoutMatches = [];
+
+window._onScoreSaved = async function() { await loadKnockout(); };
+
+// Order of rounds (must match the 'group' field in the sheet: Round of 32, Round of 16, Quarter-Final, Semi-Final, Bronze Medal, Final)
+const ROUND_ORDER = [
+  'Round of 32',
+  'Round of 16',
+  'Quarter-Final',
+  'Semi-Final',
+  'Bronze Medal',
+  'Final'
+];
+
+function renderBracket(matches) {
+  const container = document.getElementById('bracketContainer');
+  if (!matches.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-txt">No knockout matches found</div></div>`;
+    return;
+  }
+
+  // Group matches by round
+  const byRound = {};
+  ROUND_ORDER.forEach(round => { byRound[round] = []; });
+  matches.forEach(m => {
+    if (byRound[m.group]) byRound[m.group].push(m);
+    else byRound[m.group] = [m]; // fallback
+  });
+
+  let bracketHtml = '';
+  for (let round of ROUND_ORDER) {
+    const roundMatches = byRound[round] || [];
+    if (roundMatches.length === 0) continue;
+
+    // Sort matches by match number (assuming order in sheet is left-to-right)
+    roundMatches.sort((a,b) => a.num - b.num);
+
+    let matchesHtml = '';
+    roundMatches.forEach(m => {
+      const played = m.status === 'Played';
+      const homeWin = played && m.winner === m.home;
+      const awayWin = played && m.winner === m.away;
+      const homeClass = `team-name${homeWin ? ' winner-team' : ''}`;
+      const awayClass = `team-name away${awayWin ? ' winner-team' : ''}`;
+      
+      let scoreHtml;
+      if (played) {
+        let penHtml = '';
+        if (m.penH !== '' && m.penA !== '') {
+          penHtml = `<div class="pen-badge" style="margin-top:4px;">Pen ${m.penH}–${m.penA}</div>`;
+        }
+        scoreHtml = `
+          <div class="score-box played">
+            <span class="score-digit played">${m.homeScore}</span>
+            <span class="score-sep">:</span>
+            <span class="score-digit played">${m.awayScore}</span>
+          </div>
+          ${penHtml}
+        `;
+      } else {
+        scoreHtml = `<div class="score-box"><span class="score-vs">${m.time}</span></div>`;
+      }
+
+      matchesHtml += `
+        <div class="bracket-match${played ? ' played' : ''}" onclick="openScoreModal(${m.num})">
+          <div class="card-inner">
+            <div class="teams-row" style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="${homeClass}" style="flex:1;">${m.home}</div>
+              <div style="display:flex; flex-direction:column; align-items:center; margin:0 4px;">
+                ${scoreHtml}
+              </div>
+              <div class="${awayClass}" style="flex:1; text-align:right;">${m.away}</div>
+            </div>
+            <div class="venue-txt" style="font-size:9px; margin-top:6px; text-align:center;">📍 ${m.venue}, ${m.city}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    bracketHtml += `
+      <div class="round">
+        <div class="round-title">${round}</div>
+        <div class="matches-container">${matchesHtml}</div>
+      </div>
+    `;
+  }
+  container.innerHTML = bracketHtml;
+}
+
+async function loadKnockout() {
+  try {
+    const allMatches = await loadAllMatches();
+    allKnockoutMatches = allMatches.filter(m => m.isKO === true);
+    
+    const total = allKnockoutMatches.length;
+    const played = allKnockoutMatches.filter(m => m.status === 'Played').length;
+    const remaining = total - played;
+    
+    document.getElementById('totalKO').textContent = total;
+    document.getElementById('playedKO').textContent = played;
+    document.getElementById('remainingKO').textContent = remaining;
+    
+    renderBracket(allKnockoutMatches);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('bracketContainer').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load knockout stage</div></div>`;
+    showToast('Failed to load knockout matches', 'error');
+  }
+}
+
+async function syncKnockout() {
+  showToast('Refreshing knockout bracket…');
+  await loadKnockout();
+  showToast('✅ Updated');
+}
+
+window.onload = async function() {
+  document.getElementById('scoreModalMount').innerHTML = renderScoreModalHTML();
+  await initPageAuth({
+    activePage: 'knockout',
+    onReady: async () => {
+      await loadKnockout();
+      showMainApp();
+    }
+  });
+};
+</script>
+</body>
+</html>
