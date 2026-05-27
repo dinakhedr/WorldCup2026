@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>World Cup 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green-deep:   #092E18;
+      --green-dark:   #0D3D22;
+      --green-mid:    #1B6E3F;
+      --green-light:  #2D9A5A;
+      --green-pale:   #D8F3DC;
+      --gold:         #F4C430;
+      --gold-dark:    #C9A012;
+      --surface:      #ffffff;
+      --surface-2:    #f4f9f6;
+      --border:       #ddeee4;
+      --text:         #0D1F14;
+      --text-2:       #3d6b50;
+      --text-3:       #8aaa97;
+      --danger:       #ef4444;
+      --radius-xl:    24px;
+      --radius-lg:    18px;
+      --radius-md:    12px;
+      --nav-h:        72px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Lato', sans-serif;
+      background: var(--green-deep);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── LOADING / LOGIN SCREENS ── */
+    .screen {
+      position: fixed; inset: 0; z-index: 9000;
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px;
+      background: linear-gradient(160deg, #0D3D22 0%, #071A0F 100%);
+    }
+    .screen.active { display: flex; }
+
+    .screen-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius-xl);
+      padding: 36px 28px;
+      text-align: center;
+      max-width: 320px;
+      width: 100%;
+      backdrop-filter: blur(12px);
+    }
+    .screen-trophy {
+      font-size: 56px;
+      display: block;
+      margin-bottom: 6px;
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+    .screen-title {
+      font-size: 26px; font-weight: 900;
+      color: var(--gold); letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    .screen-sub {
+      font-size: 13px; color: rgba(255,255,255,0.55);
+      margin-bottom: 24px; line-height: 1.5;
+    }
+    .spinner {
+      width: 30px; height: 30px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 16px auto 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .tap-btn {
+      width: 100%; padding: 15px;
+      background: var(--gold);
+      color: var(--green-deep);
+      border: none; border-radius: var(--radius-md);
+      font-family: 'Lato', sans-serif;
+      font-size: 15px; font-weight: 900;
+      letter-spacing: 0.02em;
+      cursor: pointer; margin-top: 8px;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .tap-btn:active { transform: scale(0.97); opacity: 0.9; }
+
+    /* ── MAIN APP ── */
+    #mainApp {
+      display: none;
+      min-height: 100vh;
+      padding-bottom: calc(var(--nav-h) + 16px);
+      background: linear-gradient(160deg, #0D3D22 0%, #071A0F 55%, #0D3D22 100%);
+    }
+    @supports (padding-top: env(safe-area-inset-top)) {
+      #mainApp { padding-top: env(safe-area-inset-top); }
+    }
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      #mainApp { padding-bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom)); }
+    }
+
+    .container { max-width: 480px; margin: 0 auto; padding: 0 16px; }
+
+    /* ── HEADER ── */
+    .app-header {
+      padding: 20px 16px 0;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .header-eyebrow {
+      font-size: 10px; font-weight: 700;
+      color: var(--gold); letter-spacing: 0.12em;
+      text-transform: uppercase; margin-bottom: 4px;
+    }
+    .header-title {
+      font-size: 28px; font-weight: 900;
+      color: #fff; letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .header-title span { color: var(--gold); }
+    .header-meta {
+      font-size: 12px; color: rgba(255,255,255,0.50);
+      margin-top: 4px;
+    }
+    .header-user {
+      font-size: 11px; color: rgba(255,255,255,0.45);
+      margin-top: 2px;
+    }
+
+    /* ── STATS BAND ── */
+    .stats-band {
+      margin: 18px 16px 0;
+      max-width: 480px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: var(--radius-md);
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-val {
+      font-size: 24px; font-weight: 900;
+      color: var(--gold); line-height: 1;
+    }
+    .stat-lbl {
+      font-size: 10px; font-weight: 700;
+      color: rgba(255,255,255,0.45);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-top: 4px;
+    }
+    .stat-sub {
+      font-size: 10px;
+      color: rgba(255,255,255,0.30);
+      margin-top: 2px;
+    }
+
+    /* ── SYNC STRIP ── */
+    .sync-strip {
+      margin: 12px 16px 0;
+      max-width: 480px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 30px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      text-align: center;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .sync-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green-light); flex-shrink: 0;
+    }
+
+    /* ── NAV CARDS ── */
+    .nav-cards {
+      padding: 20px 16px 0;
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .nav-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: var(--radius-lg);
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.12s, border-color 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .nav-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--card-accent, var(--green-light));
+      border-radius: 3px 0 0 3px;
+    }
+    .nav-card:active {
+      transform: scale(0.98);
+      background: rgba(255,255,255,0.10);
+    }
+
+    .nav-card-icon {
+      width: 46px; height: 46px;
+      border-radius: var(--radius-md);
+      background: var(--card-accent-bg, rgba(255,255,255,0.08));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .nav-card-body { flex: 1; min-width: 0; }
+    .nav-card-title {
+      font-size: 16px; font-weight: 700;
+      color: #fff; letter-spacing: -0.2px;
+    }
+    .nav-card-desc {
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-card-arrow {
+      font-size: 18px;
+      color: rgba(255,255,255,0.25);
+      flex-shrink: 0;
+    }
+
+    /* Card accent colors */
+    .card-today    { --card-accent: #F4C430; --card-accent-bg: rgba(244,196,48,0.12); }
+    .card-matches  { --card-accent: #2D9A5A; --card-accent-bg: rgba(45,154,90,0.12); }
+    .card-groups   { --card-accent: #60a5fa; --card-accent-bg: rgba(96,165,250,0.12); }
+    .card-knockout { --card-accent: #f97316; --card-accent-bg: rgba(249,115,22,0.12); }
+    .card-standing { --card-accent: #a78bfa; --card-accent-bg: rgba(167,139,250,0.12); }
+
+    /* ── SIGN OUT ── */
+    .signout-wrap {
+      padding: 20px 16px 8px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .signout-btn {
+      width: 100%;
+      padding: 13px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.20);
+      border-radius: var(--radius-md);
+      font-family: 'Lato', sans-serif;
+      font-size: 14px; font-weight: 700;
+      color: #fca5a5;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.15s;
+    }
+    .signout-btn:active { background: rgba(239,68,68,0.16); }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      z-index: 2000;
+      background: rgba(7,26,15,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 10px 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      .bottom-nav { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+    }
+    .nav-tabs {
+      display: flex; gap: 4px;
+      width: 100%; max-width: 480px;
+    }
+    .nav-tab {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 2px;
+      padding: 6px 2px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.45);
+      font-family: 'Lato', sans-serif;
+      font-size: 10px; font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+    }
+    .nav-tab.active {
+      background: rgba(244,196,48,0.15);
+      color: var(--gold);
+    }
+    .nav-tab-icon { font-size: 17px; line-height: 1; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--nav-h) + 20px);
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--green-dark);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 13px; font-weight: 700;
+      opacity: 0; transition: all 0.28s;
+      z-index: 9999; white-space: nowrap;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { background: #991b1b; }
+  </style>
+</head>
+<body>
+
+<!-- ══ LOADING SCREEN ══ -->
+<div class="screen active" id="loadingScreen">
+  <div class="screen-card">
+    <span class="screen-trophy">🏆</span>
+    <div class="screen-title">World Cup 2026</div>
+    <div class="screen-sub" id="loadingMsg">Connecting to Google<br>please wait…</div>
+    <div class="spinner" id="loadingSpinner"></div>
+  </div>
+</div>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div class="screen" id="loginScreen">
+  <div class="screen-card">
+    <span class="screen-trophy">🏆</span>
+    <div class="screen-title">World Cup 2026</div>
+    <div class="screen-sub">Sign in to track all 104 matches,<br>group standings & knockout results.</div>
+    <div id="googleSignInButton" style="display:flex;justify-content:center;margin-top:4px;"></div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="mainApp">
+
+  <!-- Header -->
+  <div class="app-header">
+    <div class="header-eyebrow">FIFA · Canada · Mexico · USA</div>
+    <div class="header-title">World Cup <span>2026</span></div>
+    <div class="header-meta">11 June – 19 July · 104 Matches · 48 Teams</div>
+    <div class="header-user" id="headerUser"></div>
+  </div>
+
+  <!-- Stats band -->
+  <div class="stats-band" style="margin-left:auto;margin-right:auto;">
+    <div class="stat-card">
+      <div class="stat-val" id="statPlayed">—</div>
+      <div class="stat-lbl">Played</div>
+      <div class="stat-sub" id="statPlayedSub">of 104</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statGoals">—</div>
+      <div class="stat-lbl">Goals</div>
+      <div class="stat-sub">scored</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="statLeft">—</div>
+      <div class="stat-lbl">Left</div>
+      <div class="stat-sub">upcoming</div>
+    </div>
+  </div>
+
+  <!-- Sync strip -->
+  <div class="sync-strip" style="margin-left:auto;margin-right:auto;">
+    <div class="sync-dot"></div>
+    <span id="syncLabel">Loading data…</span>
+  </div>
+
+  <!-- Nav cards -->
+  <div class="nav-cards">
+
+    <a class="nav-card card-today" href="Today.html">
+      <div class="nav-card-icon">📅</div>
+      <div class="nav-card-body">
+        <div class="nav-card-title">Today's Matches</div>
+        <div class="nav-card-desc" id="todayDesc">Loading…</div>
+      </div>
+      <div class="nav-card-arrow">›</div>
+    </a>
+
+    <a class="nav-card card-matches" href="Matches.html">
+      <div class="nav-card-icon">📋</div>
+      <div class="nav-card-body">
+        <div class="nav-card-title">All Matches</div>
+        <div class="nav-card-desc">Full schedule · filter by group, stage, status</div>
+      </div>
+      <div class="nav-card-arrow">›</div>
+    </a>
+
+    <a class="nav-card card-groups" href="Groups.html">
+      <div class="nav-card-icon">👥</div>
+      <div class="nav-card-body">
+        <div class="nav-card-title">Groups</div>
+        <div class="nav-card-desc">Groups A–L · enter match results</div>
+      </div>
+      <div class="nav-card-arrow">›</div>
+    </a>
+
+    <a class="nav-card card-knockout" href="Knockout.html">
+      <div class="nav-card-icon">⚡</div>
+      <div class="nav-card-body">
+        <div class="nav-card-title">Knockout Stage</div>
+        <div class="nav-card-desc">R32 · R16 · QF · SF · Final</div>
+      </div>
+      <div class="nav-card-arrow">›</div>
+    </a>
+
+    <a class="nav-card card-standing" href="Standings.html">
+      <div class="nav-card-icon">📊</div>
+      <div class="nav-card-body">
+        <div class="nav-card-title">Standings</div>
+        <div class="nav-card-desc">Live group tables · auto-calculated</div>
+      </div>
+      <div class="nav-card-arrow">›</div>
+    </a>
+
+  </div>
+
+  <!-- Sign out -->
+  <div class="signout-wrap">
+    <button class="signout-btn" onclick="doSignOut()">
+      <span>🚪</span> Sign Out
+    </button>
+  </div>
+
+</div><!-- /mainApp -->
+
+<!-- Bottom nav -->
+<nav class="bottom-nav" id="bottomNav" style="display:none;">
+  <div class="nav-tabs">
+    <a class="nav-tab active" href="Home.html"><span class="nav-tab-icon">🏠</span>Home</a>
+    <a class="nav-tab" href="Today.html"><span class="nav-tab-icon">📅</span>Today</a>
+    <a class="nav-tab" href="Matches.html"><span class="nav-tab-icon">📋</span>Matches</a>
+    <a class="nav-tab" href="Groups.html"><span class="nav-tab-icon">👥</span>Groups</a>
+    <a class="nav-tab" href="Knockout.html"><span class="nav-tab-icon">⚡</span>Knockout</a>
+    <a class="nav-tab" href="Standings.html"><span class="nav-tab-icon">📊</span>Standings</a>
+  </div>
+</nav>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════
+const CLIENT_ID      = '932472749275-3s12tjsttbppmc96gf5rdl6orrpj0o5c.apps.googleusercontent.com';
+const SPREADSHEET_ID = '1a-VzpWXZMrQZqwBLV_BstNREArnC8mgxuvSdz2MyjRM';
+const SCOPES         = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+const DISCOVERY      = [
+  'https://sheets.googleapis.com/$discovery/rest?version=v4',
+  'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+];
+const SHEET_GM       = 'Group Matches';
+const SHEET_MATCHES  = 'Matches';
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let currentUserEmail    = null;
+let currentAccessToken  = null;
+
+// ═══════════════════════════════════════════════════
+// TOKEN HELPERS
+// ═══════════════════════════════════════════════════
+function saveToken(t)  { sessionStorage.setItem('wc_access_token', t); }
+function getToken()    { return sessionStorage.getItem('wc_access_token'); }
+function clearToken()  { sessionStorage.removeItem('wc_access_token'); }
+
+function getEmailFromJWT(jwt) {
+  try {
+    const json = decodeURIComponent(
+      atob(jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))
+        .split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+    );
+    return JSON.parse(json).email || null;
+  } catch(e) { return null; }
+}
+
+function isIOS() {
+  return (/iP(hone|od|ad)/.test(navigator.userAgent) &&
+          /WebKit/.test(navigator.userAgent) &&
+          !/CriOS|FxiOS/.test(navigator.userAgent)) ||
+         window.navigator.standalone === true;
+}
+
+// ═══════════════════════════════════════════════════
+// GAPI
+// ═══════════════════════════════════════════════════
+async function initGapi() {
+  await new Promise(resolve => {
+    if (gapi.client?.sheets) { resolve(); return; }
+    gapi.load('client', resolve);
+  });
+  await gapi.client.init({ apiKey: '', discoveryDocs: DISCOVERY });
+}
+
+// ═══════════════════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════════════════
+function showScreen(id) {
+  document.getElementById('loadingScreen').classList.remove('active');
+  document.getElementById('loginScreen').classList.remove('active');
+  document.getElementById('mainApp').style.display    = 'none';
+  document.getElementById('bottomNav').style.display  = 'none';
+
+  if (id === 'loading')  document.getElementById('loadingScreen').classList.add('active');
+  if (id === 'login')    document.getElementById('loginScreen').classList.add('active');
+  if (id === 'main') {
+    document.getElementById('mainApp').style.display   = 'block';
+    document.getElementById('bottomNav').style.display = 'flex';
+  }
+}
+
+function setLoadingMsg(msg) {
+  document.getElementById('loadingMsg').innerHTML = msg;
+}
+
+function showTapScreen(onTap) {
+  const card = document.querySelector('#loadingScreen .screen-card');
+  card.innerHTML = `
+    <span class="screen-trophy">🏆</span>
+    <div class="screen-title">Welcome Back</div>
+    <div class="screen-sub">Tap below to connect<br>to your Google account</div>
+    <button class="tap-btn" id="tapBtn">Connect to Google</button>`;
+  document.getElementById('tapBtn').addEventListener('click', () => {
+    card.innerHTML = `
+      <span class="screen-trophy">🏆</span>
+      <div class="screen-title">World Cup 2026</div>
+      <div class="screen-sub">Connecting…</div>
+      <div class="spinner"></div>`;
+    onTap();
+  });
+  showScreen('loading');
+}
+
+// ═══════════════════════════════════════════════════
+// LOAD STATS FROM SHEET
+// ═══════════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const res = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_GM}!A:O`
+    });
+    const rows = res.result.values || [];
+
+    let played = 0, goals = 0, upcoming = 0, todayCount = 0;
+    const todayCairo = getTodayCairo();
+
+    rows.forEach(row => {
+      const num = parseInt(row[0]);
+      if (isNaN(num)) return;
+      const status = (row[14] || '').trim();
+      const date   = (row[2]  || '').trim();
+      const hg     = parseInt(row[5]) || 0;
+      const ag     = parseInt(row[6]) || 0;
+
+      if (status === 'Played') {
+        played++;
+        goals += hg + ag;
+      } else {
+        upcoming++;
+      }
+      if (date === todayCairo) todayCount++;
+    });
+
+    document.getElementById('statPlayed').textContent   = played;
+    document.getElementById('statGoals').textContent    = goals;
+    document.getElementById('statLeft').textContent     = upcoming;
+    document.getElementById('statPlayedSub').textContent = `of 104`;
+
+    // Today card description
+    const todayEl = document.getElementById('todayDesc');
+    if (todayCount > 0) {
+      todayEl.textContent = `${todayCount} match${todayCount > 1 ? 'es' : ''} today · Cairo time`;
+    } else {
+      todayEl.textContent = 'No matches today — see upcoming';
+    }
+
+    setSyncLabel('✅ Updated ' + new Date().toLocaleTimeString('en-EG', {hour:'2-digit',minute:'2-digit'}));
+  } catch(e) {
+    console.error('Stats load failed', e);
+    setSyncLabel('⚠️ Could not load data');
+  }
+}
+
+function getTodayCairo() {
+  // Format today's date as dd-Mon-yy in Cairo timezone
+  const now = new Date();
+  const cairo = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d = String(cairo.getDate()).padStart(2,'0');
+  const m = months[cairo.getMonth()];
+  const y = String(cairo.getFullYear()).slice(-2);
+  return `${d}-${m}-${y}`;
+}
+
+function setSyncLabel(txt) {
+  document.getElementById('syncLabel').textContent = txt;
+}
+
+// ═══════════════════════════════════════════════════
+// SHOW MAIN APP
+// ═══════════════════════════════════════════════════
+async function showMainApp() {
+  if (currentUserEmail) {
+    document.getElementById('headerUser').textContent = `Signed in as ${currentUserEmail}`;
+  }
+  showScreen('main');
+  await loadStats();
+}
+
+// ═══════════════════════════════════════════════════
+// OAUTH FLOW
+// ═══════════════════════════════════════════════════
+function makeTokenClient(callback, silent = false) {
+  const cfg = { client_id: CLIENT_ID, scope: SCOPES, callback };
+  if (silent) cfg.prompt = '';
+  return google.accounts.oauth2.initTokenClient(cfg);
+}
+
+async function onTokenGranted(resp) {
+  if (!resp.access_token) {
+    showToast('Authentication failed', 'error');
+    showScreen('login');
+    return;
+  }
+  currentAccessToken = resp.access_token;
+  saveToken(currentAccessToken);
+  gapi.client.setToken({ access_token: currentAccessToken });
+  await showMainApp();
+}
+
+async function handleCredentialResponse(resp) {
+  const jwt = resp.credential;
+  currentUserEmail = getEmailFromJWT(jwt);
+  if (!currentUserEmail) return;
+  localStorage.setItem('wc_google_token', jwt);
+  showScreen('loading');
+  await initGapi();
+  const doReq = () => makeTokenClient(onTokenGranted).requestAccessToken();
+  if (isIOS()) { showTapScreen(doReq); } else { doReq(); }
+}
+
+async function checkLogin() {
+  const jwt = localStorage.getItem('wc_google_token');
+  if (!jwt) { showScreen('login'); return; }
+
+  currentUserEmail = getEmailFromJWT(jwt);
+  if (!currentUserEmail) { showScreen('login'); return; }
+
+  await initGapi();
+
+  // Try cached access token first
+  const saved = getToken();
+  if (saved) {
+    currentAccessToken = saved;
+    gapi.client.setToken({ access_token: saved });
+    try {
+      // Quick validation ping
+      await gapi.client.sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Matches!A1'
+      });
+      await showMainApp();
+      return;
+    } catch(e) {
+      clearToken();
+    }
+  }
+
+  // Need new token
+  const doReq = () => makeTokenClient(onTokenGranted, true).requestAccessToken();
+  if (isIOS()) { showTapScreen(doReq); }
+  else { showScreen('loading'); doReq(); }
+}
+
+// ═══════════════════════════════════════════════════
+// SIGN OUT
+// ═══════════════════════════════════════════════════
+function doSignOut() {
+  if (!confirm('Sign out of World Cup 2026?')) return;
+  clearToken();
+  localStorage.removeItem('wc_google_token');
+  showScreen('login');
+  showToast('Signed out');
+}
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
+let _toastTimer = null;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  if (_toastTimer) { clearTimeout(_toastTimer); }
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  void t.offsetHeight;
+  t.classList.add('show');
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+window.onload = function() {
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleCredentialResponse
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('googleSignInButton'),
+    { theme: 'filled_black', size: 'large', text: 'continue_with', shape: 'rectangular', locale: 'en' }
+  );
+  checkLogin();
+};
+</script>
+</body>
+</html>
