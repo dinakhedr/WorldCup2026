@@ -22,7 +22,7 @@
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
   <style>
-    /* Only page-specific styles (group tables) – no spacer or content overrides */
+    /* Only page-specific styles (group tables) */
     .group-standings {
       background: var(--surface);
       border-radius: var(--radius-lg);
@@ -46,34 +46,6 @@
       font-size: 11px;
       color: var(--text-3);
     }
-    .standings-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-    .standings-table th {
-      padding: 10px 5px;
-      text-align: center;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--text-3);
-      border-bottom: 1px solid var(--border);
-    }
-    .standings-table th:first-child { text-align: left; padding-left: 12px; }
-    .standings-table td {
-      padding: 10px 5px;
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-2);
-    }
-    .standings-table td:first-child {
-      text-align: left;
-      font-weight: 700;
-      color: var(--text);
-      padding-left: 12px;
-    }
-    .standings-table tr:last-child td { border-bottom: none; }
     .qualify-cell {
       font-weight: 900;
       color: var(--green-mid);
@@ -217,9 +189,10 @@ function renderGroup(groupId, standings) {
   `;
 }
 
-async function loadGroups() {
+async function loadGroups(forceRefresh = false) {
   try {
-    allMatches = await loadAllMatches();
+    allMatches = await loadAllMatches(forceRefresh);
+    window._allMatches = allMatches;
     const groupMatches = allMatches.filter(m => !m.isKO);
     const totalGroupMatches = groupMatches.length;
     const playedGroupMatches = groupMatches.filter(m => m.status === 'Played').length;
@@ -242,7 +215,7 @@ async function loadGroups() {
 
 async function refreshAll() {
   showToast('Refreshing groups…');
-  await loadGroups();
+  await loadGroups(true);
   showToast('✅ Updated');
 }
 

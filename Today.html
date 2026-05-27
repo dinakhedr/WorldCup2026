@@ -146,6 +146,7 @@ function getTodayCairoFormatted() {
 async function loadDataAndRefresh() {
   try {
     allMatches = await loadAllMatches();
+    window._allMatches = allMatches;
     if (!selectedDate) {
       selectedDate = getTodayCairoFormatted();
       selectedDateISO = toISODate(selectedDate);

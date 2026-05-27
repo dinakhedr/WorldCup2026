@@ -190,6 +190,19 @@ function showToast(msg, type = 'success') {
 }
 
 // ── Date helpers ───────────────────────────────────────────
+// ── 12-hour time formatter ─────────────────────────────────
+// Input: "22:00" → "10:00 PM"  |  "05:00" → "5:00 AM"
+function formatTime12(time24) {
+  if (!time24 || !time24.includes(':')) return time24 || '';
+  const [hStr, mStr] = time24.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr || '00';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+}
+
 function getTodayCairo() {
   const now   = new Date();
   const cairo = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
@@ -251,18 +264,50 @@ function parseGMRow(row, rowIndex) {
   };
 }
 
-// ── Load all Group Matches rows ────────────────────────────
-async function loadAllMatches() {
-  const res = await gapi.client.sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_GM}!A:O`
-  });
+// ── Load all Group Matches rows (with 60s cache) ───────────
+const _CACHE_KEY = 'wc_matches_cache';
+const _CACHE_TTL = 60000; // 60 seconds
+
+function _invalidateMatchCache() {
+  sessionStorage.removeItem(_CACHE_KEY);
+}
+
+async function loadAllMatches(forceRefresh = false) {
+  if (!forceRefresh) {
+    try {
+      const cached = sessionStorage.getItem(_CACHE_KEY);
+      if (cached) {
+        const { ts, data } = JSON.parse(cached);
+        if (Date.now() - ts < _CACHE_TTL) return data;
+      }
+    } catch(e) { /* ignore bad cache */ }
+  }
+
+  let res;
+  try {
+    res = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_GM}!A:O`
+    });
+  } catch(e) {
+    // Token likely expired — clear it so next call re-auths
+    if (e.status === 401 || (e.result && e.result.error && e.result.error.code === 401)) {
+      clearAccessToken();
+    }
+    throw e;
+  }
+
   const rows = res.result.values || [];
   const matches = [];
   rows.forEach((row, idx) => {
     const m = parseGMRow(row, idx);
     if (m) matches.push(m);
   });
+
+  try {
+    sessionStorage.setItem(_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: matches }));
+  } catch(e) { /* quota exceeded — ignore */ }
+
   return matches;
 }
 
@@ -286,6 +331,8 @@ function matchCardHTML(m, opts = {}) {
     badgeLabel = `Group ${m.group}`;
   }
 
+  const timeStr = formatTime12(m.time);
+
   let scoreHTML;
   if (played) {
     scoreHTML = `<div class="score-box played">
@@ -294,7 +341,7 @@ function matchCardHTML(m, opts = {}) {
       <span class="score-digit played">${m.awayScore}</span>
     </div>`;
   } else {
-    scoreHTML = `<div class="score-box"><span class="score-vs">${m.time}</span></div>`;
+    scoreHTML = `<div class="score-box"><span class="score-vs">${timeStr}</span></div>`;
   }
 
   const homeWin  = played && m.winner === m.home;
@@ -313,12 +360,12 @@ function matchCardHTML(m, opts = {}) {
           <span class="stage-badge" style="background:${badgeBg};color:${badgeTxt}">${badgeLabel}</span>
           <span class="match-time">${played
             ? '<span class="played-dot"></span>FT'
-            : `${dateLine}${m.time} Cairo`}</span>
+            : `${dateLine}${timeStr} Cairo`}</span>
         </div>
         <div class="teams-row">
-          <div class="${homeClass}">${m.home}</div>
+          <div class="${homeClass}">${escHtml(m.home)}</div>
           ${scoreHTML}
-          <div class="${awayClass}">${m.away}</div>
+          <div class="${awayClass}">${escHtml(m.away)}</div>
         </div>
       </div>
       <div class="card-bottom">
@@ -363,7 +410,7 @@ function renderScoreModalHTML() {
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" onclick="closeScoreModal()">Cancel</button>
-        <button class="btn-clear"  onclick="clearScoreResult()">Clear</button>
+        <button class="btn-clear"  id="btnClear" onclick="clearScoreResult()">Clear</button>
         <button class="btn-save"   id="btnSave" onclick="saveScoreResult()">Save Result</button>
       </div>
     </div>
@@ -390,7 +437,7 @@ function openScoreModal(matchNum) {
   badge.style.color        = badgeTxt;
 
   document.getElementById('modalTeams').textContent = `${m.home} vs ${m.away}`;
-  document.getElementById('modalMeta').textContent  = `${m.date} · ${m.time} Cairo · ${m.venue}, ${m.city}`;
+  document.getElementById('modalMeta').textContent  = `${m.date} · ${formatTime12(m.time)} Cairo · ${m.venue}, ${m.city}`;
   document.getElementById('lblHome').textContent    = m.home;
   document.getElementById('lblAway').textContent    = m.away;
 
@@ -407,6 +454,14 @@ function openScoreModal(matchNum) {
 function closeScoreModal() {
   document.getElementById('scoreModal').classList.remove('open');
   _editingMatch = null;
+  // Reset clear button confirming state
+  const btn = document.getElementById('btnClear');
+  if (btn) {
+    btn.dataset.confirming = 'false';
+    btn.textContent = 'Clear';
+    btn.style.background = '';
+    btn.style.color = '';
+  }
 }
 
 async function saveScoreResult() {
@@ -449,6 +504,7 @@ async function saveScoreResult() {
 
     closeScoreModal();
     showToast('✅ Result saved!');
+    _invalidateMatchCache();
     if (typeof window._onScoreSaved === 'function') await window._onScoreSaved();
   } catch(e) {
     console.error(e);
@@ -460,18 +516,41 @@ async function saveScoreResult() {
 
 async function clearScoreResult() {
   if (!_editingMatch) return;
-  if (!confirm('Clear this result?')) return;
-  const sheetRow = _editingMatch.rowIndex + 1;
-  try {
-    await gapi.client.sheets.spreadsheets.values.clear({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_GM}!F${sheetRow}:I${sheetRow}`
-    });
-    closeScoreModal();
-    showToast('Result cleared');
-    if (typeof window._onScoreSaved === 'function') await window._onScoreSaved();
-  } catch(e) {
-    showToast('Failed to clear', 'error');
+  // iOS-safe in-UI confirm — replace Clear button with two inline buttons
+  const btn = document.getElementById('btnClear');
+  if (btn.dataset.confirming === 'true') {
+    // Second tap — actually clear
+    btn.textContent = 'Clearing…'; btn.disabled = true;
+    const sheetRow = _editingMatch.rowIndex + 1;
+    try {
+      await gapi.client.sheets.spreadsheets.values.clear({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_GM}!F${sheetRow}:I${sheetRow}`
+      });
+      _invalidateMatchCache();
+      closeScoreModal();
+      showToast('Result cleared');
+      if (typeof window._onScoreSaved === 'function') await window._onScoreSaved();
+    } catch(e) {
+      showToast('Failed to clear', 'error');
+      btn.textContent = 'Clear'; btn.disabled = false;
+      btn.dataset.confirming = 'false';
+    }
+  } else {
+    // First tap — ask for confirmation inline
+    btn.dataset.confirming = 'true';
+    btn.textContent = 'Tap again to confirm';
+    btn.style.background = '#fee2e2';
+    btn.style.color = '#991b1b';
+    // Auto-reset after 3s if not confirmed
+    setTimeout(() => {
+      if (btn.dataset.confirming === 'true') {
+        btn.dataset.confirming = 'false';
+        btn.textContent = 'Clear';
+        btn.style.background = '';
+        btn.style.color = '';
+      }
+    }, 3000);
   }
 }
 

@@ -149,7 +149,7 @@ function renderList(matches) {
 async function syncMatches(silent = false) {
   if (!silent) showToast('Refreshing…');
   try {
-    window._allMatches = await loadAllMatches();
+    window._allMatches = await loadAllMatches(true); // force bypass cache
     updateMiniStats();
     applyFilters();
     if (!silent) showToast('✅ Updated');

@@ -221,7 +221,7 @@ async function loadHomeStats() {
       ? `${todayCount} match${todayCount > 1 ? 'es' : ''} today · Cairo time`
       : 'No matches today — see upcoming';
 
-    syncLabel.textContent = '✅ Updated ' + new Date().toLocaleTimeString('en-EG', { hour:'2-digit', minute:'2-digit' });
+    syncLabel.textContent = '✅ Updated ' + new Date().toLocaleTimeString('en-EG', { hour:'numeric', minute:'2-digit', hour12: true });
     syncInner.setAttribute('data-error', 'false');
   } catch(e) {
     console.error('Stats load error:', e);

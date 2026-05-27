@@ -7,89 +7,21 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Knockout Stage · World Cup 2026</title>
-  <!-- PWA & Icons -->
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
   <link rel="shortcut icon" href="images/icon-192.png">
   <meta name="apple-mobile-web-app-title" content="WC2026">
   <meta name="theme-color" content="#0D1B3E">
-  <!-- Fonts & Styles -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
-  <style>
-    /* Knockout bracket layout */
-    .bracket {
-      display: flex;
-      justify-content: center;
-      overflow-x: auto;
-      padding: 16px 8px;
-      gap: 24px;
-    }
-    .round {
-      min-width: 220px;
-      flex-shrink: 0;
-    }
-    .round-title {
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-3);
-      text-align: center;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 12px;
-    }
-    .matches-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    /* Compact match card for bracket */
-    .bracket-match {
-      background: var(--surface);
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border);
-      cursor: pointer;
-      transition: transform 0.12s;
-    }
-    .bracket-match:active {
-      transform: scale(0.98);
-    }
-    .bracket-match.played {
-      background: #f8fef9;
-    }
-    .bracket-match .card-inner {
-      padding: 10px 12px;
-    }
-    .bracket-match .teams-row {
-      gap: 6px;
-    }
-    .bracket-match .team-name {
-      font-size: 12px;
-    }
-    .bracket-match .score-digit {
-      font-size: 14px;
-    }
-    .bracket-match .score-box {
-      min-width: 50px;
-      padding: 3px 8px;
-    }
-    .bottom-nav-spacer {
-      height: calc(72px + 20px);
-      width: 100%;
-      pointer-events: none;
-    }
-  </style>
 </head>
 <body>
 
-<!-- LOADING SCREEN -->
 <div class="screen active" id="loadingScreen">
   <div class="screen-card" id="loadingBox">
     <span class="screen-trophy">⚡</span>
@@ -99,7 +31,6 @@
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="mainApp" style="display:none;">
 
   <div class="page-header">
@@ -119,7 +50,8 @@
     </div>
   </div>
 
-  <div class="bracket" id="bracketContainer">
+  <!-- Bracket scroll area -->
+  <div class="bracket-outer" id="bracketOuter">
     <div class="loading-state"><div class="spinner"></div></div>
   </div>
 
@@ -131,11 +63,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let allKnockoutMatches = [];
-
 window._onScoreSaved = async function() { await loadKnockout(); };
 
-// Order of rounds (must match the 'group' field in the sheet: Round of 32, Round of 16, Quarter-Final, Semi-Final, Bronze Medal, Final)
 const ROUND_ORDER = [
   'Round of 32',
   'Round of 16',
@@ -145,98 +74,225 @@ const ROUND_ORDER = [
   'Final'
 ];
 
+// How many R32 matches feed into each subsequent round match (pair groupings)
+// R32: 16 matches → R16: 8 → QF: 4 → SF: 2 → Final: 1  (Bronze is separate)
+const ROUND_PAIRS = {
+  'Round of 32': 1,      // base unit
+  'Round of 16': 2,      // every 2 R32 matches feed 1 R16
+  'Quarter-Final': 4,
+  'Semi-Final': 8,
+  'Bronze Medal': 0,     // standalone
+  'Final': 0,            // standalone
+};
+
+function buildMatchCard(m) {
+  if (!m) return '<div class="bkt-match" style="visibility:hidden;min-height:72px;"></div>';
+
+  const played  = m.status === 'Played';
+  const homeWin = played && m.winner === m.home;
+  const awayWin = played && m.winner === m.away;
+  const isTBD   = m.home.startsWith('TBD') || m.home === '';
+
+  const homeName  = escHtml(m.home  || 'TBD');
+  const awayName  = escHtml(m.away  || 'TBD');
+  const homeClass = `bkt-team-name${isTBD ? ' tbd' : homeWin ? ' winner' : ''}`;
+  const awayClass = `bkt-team-name${isTBD ? ' tbd' : awayWin ? ' winner' : ''}`;
+
+  const homeScore = played ? `<span class="bkt-team-score${homeWin ? ' winner' : ''}">${m.homeScore}</span>` : '';
+  const awayScore = played ? `<span class="bkt-team-score${awayWin ? ' winner' : ''}">${m.awayScore}</span>` : '';
+
+  let penLine = '';
+  if (played && m.penH !== '' && m.penA !== '') {
+    penLine = `<div class="bkt-match-venue" style="border-top:none;color:#b45309;">Pen ${m.penH}–${m.penA}</div>`;
+  }
+
+  const venueStr = m.venue ? `📍 ${m.city}` : '';
+
+  return `
+    <div class="bkt-match${played ? ' played' : ''}" onclick="openScoreModal(${m.num})">
+      <div class="bkt-match-time">${formatTime12(m.time)} · ${m.date}</div>
+      <div class="bkt-team">
+        <span class="${homeClass}">${homeName}</span>
+        ${homeScore}
+      </div>
+      <div class="bkt-team">
+        <span class="${awayClass}">${awayName}</span>
+        ${awayScore}
+      </div>
+      ${penLine}
+      ${venueStr ? `<div class="bkt-match-venue">${venueStr}</div>` : ''}
+    </div>`;
+}
+
+function buildConnector(count) {
+  // count = number of match pairs to connect (each pair = 2 matches → 1 feeder)
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += `
+      <div style="display:flex;flex-direction:row;flex:1;min-height:0;">
+        <div style="width:24px;display:flex;flex-direction:column;flex:1;">
+          <div style="flex:1;border-right:2px solid var(--border);border-bottom:2px solid var(--border);"></div>
+          <div style="flex:1;border-right:2px solid var(--border);border-top:2px solid var(--border);"></div>
+        </div>
+        <div style="width:12px;border-top:2px solid var(--border);align-self:center;"></div>
+      </div>`;
+  }
+  return html;
+}
+
 function renderBracket(matches) {
-  const container = document.getElementById('bracketContainer');
+  const outer = document.getElementById('bracketOuter');
+
   if (!matches.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-txt">No knockout matches found</div></div>`;
+    outer.innerHTML = `<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-txt">No knockout matches found</div></div>`;
     return;
   }
 
-  // Group matches by round
+  // Group by round
   const byRound = {};
-  ROUND_ORDER.forEach(round => { byRound[round] = []; });
-  matches.forEach(m => {
-    if (byRound[m.group]) byRound[m.group].push(m);
-    else byRound[m.group] = [m]; // fallback
-  });
+  ROUND_ORDER.forEach(r => byRound[r] = []);
+  matches.forEach(m => { if (byRound[m.group]) byRound[m.group].push(m); });
+  ROUND_ORDER.forEach(r => byRound[r].sort((a,b) => a.num - b.num));
 
-  let bracketHtml = '';
-  for (let round of ROUND_ORDER) {
-    const roundMatches = byRound[round] || [];
-    if (roundMatches.length === 0) continue;
+  // Rounds to render left-to-right (R32→R16→QF→SF→Final), then Bronze below
+  const mainRounds  = ['Round of 32','Round of 16','Quarter-Final','Semi-Final','Final'];
+  const bronzeRound = ['Bronze Medal'];
 
-    // Sort matches by match number (assuming order in sheet is left-to-right)
-    roundMatches.sort((a,b) => a.num - b.num);
+  // ---------- Build main bracket columns ----------
+  const r32Count = byRound['Round of 32'].length || 16;
 
-    let matchesHtml = '';
-    roundMatches.forEach(m => {
-      const played = m.status === 'Played';
-      const homeWin = played && m.winner === m.home;
-      const awayWin = played && m.winner === m.away;
-      const homeClass = `team-name${homeWin ? ' winner-team' : ''}`;
-      const awayClass = `team-name away${awayWin ? ' winner-team' : ''}`;
-      
-      let scoreHtml;
-      if (played) {
-        let penHtml = '';
-        if (m.penH !== '' && m.penA !== '') {
-          penHtml = `<div class="pen-badge" style="margin-top:4px;">Pen ${m.penH}–${m.penA}</div>`;
-        }
-        scoreHtml = `
-          <div class="score-box played">
-            <span class="score-digit played">${m.homeScore}</span>
-            <span class="score-sep">:</span>
-            <span class="score-digit played">${m.awayScore}</span>
-          </div>
-          ${penHtml}
-        `;
-      } else {
-        scoreHtml = `<div class="score-box"><span class="score-vs">${m.time}</span></div>`;
-      }
+  // Heights: each R32 match occupies 1 unit; higher rounds double spacing
+  function buildRoundColumn(roundName, matchesInRound, unitHeight) {
+    const cards = matchesInRound.map(m => buildMatchCard(m)).join('');
+    // Wrap each card in a flex cell of the right height
+    const wrappedCards = matchesInRound.map(m =>
+      `<div style="display:flex;align-items:center;min-height:${unitHeight}px;flex-shrink:0;">${buildMatchCard(m)}</div>`
+    ).join('');
 
-      matchesHtml += `
-        <div class="bracket-match${played ? ' played' : ''}" onclick="openScoreModal(${m.num})">
-          <div class="card-inner">
-            <div class="teams-row" style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="${homeClass}" style="flex:1;">${m.home}</div>
-              <div style="display:flex; flex-direction:column; align-items:center; margin:0 4px;">
-                ${scoreHtml}
-              </div>
-              <div class="${awayClass}" style="flex:1; text-align:right;">${m.away}</div>
-            </div>
-            <div class="venue-txt" style="font-size:9px; margin-top:6px; text-align:center;">📍 ${m.venue}, ${m.city}</div>
-          </div>
+    return `
+      <div class="bracket-round" style="flex-shrink:0;width:200px;">
+        <div class="bracket-round-header">${roundName}</div>
+        <div class="bracket-slots" style="display:flex;flex-direction:column;">
+          ${wrappedCards}
         </div>
-      `;
-    });
-
-    bracketHtml += `
-      <div class="round">
-        <div class="round-title">${round}</div>
-        <div class="matches-container">${matchesHtml}</div>
-      </div>
-    `;
+      </div>`;
   }
-  container.innerHTML = bracketHtml;
+
+  // Unit height = card height + gap. We use ~92px per R32 slot
+  const BASE = 92;
+
+  let html = `<div class="bracket-scroll" style="align-items:flex-start;padding-bottom:20px;">`;
+
+  // R32
+  const r32Matches = byRound['Round of 32'];
+  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
+    <div class="bracket-round-header">Round of 32</div>
+    <div style="display:flex;flex-direction:column;">
+      ${r32Matches.map(m => `<div style="min-height:${BASE}px;display:flex;align-items:center;">${buildMatchCard(m)}</div>`).join('')}
+    </div>
+  </div>`;
+
+  // Connector R32→R16
+  const r16Count = byRound['Round of 16'].length || 8;
+  html += buildConnectorColumn(r32Matches.length, 2, BASE);
+
+  // R16
+  const r16Matches = byRound['Round of 16'];
+  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
+    <div class="bracket-round-header">Round of 16</div>
+    <div style="display:flex;flex-direction:column;">
+      ${r16Matches.map(m => `<div style="min-height:${BASE*2}px;display:flex;align-items:center;">${buildMatchCard(m)}</div>`).join('')}
+    </div>
+  </div>`;
+
+  // Connector R16→QF
+  html += buildConnectorColumn(r16Matches.length, 2, BASE * 2);
+
+  // QF
+  const qfMatches = byRound['Quarter-Final'];
+  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
+    <div class="bracket-round-header">Quarter-Final</div>
+    <div style="display:flex;flex-direction:column;">
+      ${qfMatches.map(m => `<div style="min-height:${BASE*4}px;display:flex;align-items:center;">${buildMatchCard(m)}</div>`).join('')}
+    </div>
+  </div>`;
+
+  // Connector QF→SF
+  html += buildConnectorColumn(qfMatches.length, 2, BASE * 4);
+
+  // SF
+  const sfMatches = byRound['Semi-Final'];
+  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
+    <div class="bracket-round-header">Semi-Final</div>
+    <div style="display:flex;flex-direction:column;">
+      ${sfMatches.map(m => `<div style="min-height:${BASE*8}px;display:flex;align-items:center;">${buildMatchCard(m)}</div>`).join('')}
+    </div>
+  </div>`;
+
+  // Connector SF→Final
+  html += buildConnectorColumn(sfMatches.length, 2, BASE * 8);
+
+  // Final
+  const finalMatch = byRound['Final'];
+  const totalH = r32Matches.length * BASE;
+  html += `<div class="bracket-round" style="flex-shrink:0;width:196px;">
+    <div class="bracket-round-header">🏆 Final</div>
+    <div style="height:${totalH}px;display:flex;align-items:center;">
+      ${buildMatchCard(finalMatch[0] || null)}
+    </div>
+  </div>`;
+
+  html += `</div>`; // close bracket-scroll
+
+  // Bronze medal — separate row below
+  const bronzeMatch = byRound['Bronze Medal'];
+  if (bronzeMatch.length) {
+    html += `<div style="padding:4px 16px 0;display:flex;align-items:center;gap:12px;">
+      <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);white-space:nowrap;">🥉 Bronze Medal</div>
+      <div style="width:196px;">${buildMatchCard(bronzeMatch[0])}</div>
+    </div>`;
+  }
+
+  outer.innerHTML = html;
+}
+
+// Build the connector SVG-like column between two rounds
+// totalMatches = matches in the LEFT round, groupSize = how many left matches → 1 right match
+function buildConnectorColumn(totalMatches, groupSize, unitHeight) {
+  const pairCount = Math.ceil(totalMatches / groupSize);
+  let rows = '';
+  for (let i = 0; i < pairCount; i++) {
+    rows += `
+      <div style="display:flex;flex-direction:row;height:${unitHeight * groupSize}px;flex-shrink:0;">
+        <div style="width:20px;display:flex;flex-direction:column;">
+          <div style="flex:1;border-right:2px solid var(--border);border-bottom:2px solid var(--border);border-bottom-right-radius:3px;"></div>
+          <div style="flex:1;border-right:2px solid var(--border);border-top:2px solid var(--border);border-top-right-radius:3px;"></div>
+        </div>
+        <div style="width:12px;border-top:2px solid var(--border);align-self:center;"></div>
+      </div>`;
+  }
+  return `<div style="flex-shrink:0;width:32px;padding-top:28px;">${rows}</div>`;
 }
 
 async function loadKnockout() {
   try {
     const allMatches = await loadAllMatches();
-    allKnockoutMatches = allMatches.filter(m => m.isKO === true);
-    
-    const total = allKnockoutMatches.length;
-    const played = allKnockoutMatches.filter(m => m.status === 'Played').length;
+    window._allMatches = allMatches;
+    const koMatches = allMatches.filter(m => m.isKO);
+
+    const total     = koMatches.length;
+    const played    = koMatches.filter(m => m.status === 'Played').length;
     const remaining = total - played;
-    
-    document.getElementById('totalKO').textContent = total;
-    document.getElementById('playedKO').textContent = played;
+
+    document.getElementById('totalKO').textContent     = total;
+    document.getElementById('playedKO').textContent    = played;
     document.getElementById('remainingKO').textContent = remaining;
-    
-    renderBracket(allKnockoutMatches);
-  } catch (err) {
+
+    renderBracket(koMatches);
+  } catch(err) {
     console.error(err);
-    document.getElementById('bracketContainer').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load knockout stage</div></div>`;
+    document.getElementById('bracketOuter').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load knockout stage</div></div>`;
     showToast('Failed to load knockout matches', 'error');
   }
 }

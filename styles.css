@@ -677,6 +677,144 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════
+   KNOCKOUT BRACKET
+   ════════════════════════════════════════════════════════════ */
+.bracket-outer {
+  overflow-x: auto;
+  padding: 16px 8px 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.bracket-scroll {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  width: max-content;
+  min-width: 100%;
+  padding-bottom: 8px;
+}
+.bracket-round {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 190px;
+  max-width: 210px;
+  flex-shrink: 0;
+}
+.bracket-round-header {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  text-align: center;
+  padding: 0 12px 10px;
+  white-space: nowrap;
+}
+.bracket-slots {
+  display: flex;
+  flex-direction: column;
+}
+/* Each "group" of matches in a round with connector lines */
+.bracket-pair {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+/* The connector column between rounds */
+.bracket-connector {
+  display: flex;
+  flex-direction: column;
+  width: 24px;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+.bracket-connector-line {
+  flex: 1;
+  border-right: 2px solid var(--border);
+  position: relative;
+}
+.bracket-connector-line.top { border-bottom: 2px solid var(--border); }
+.bracket-connector-line.bottom { border-top: 2px solid var(--border); }
+.bracket-connector-mid {
+  width: 12px;
+  align-self: center;
+  border-top: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Bracket match card */
+.bkt-match {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin: 6px 8px;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  position: relative;
+  overflow: hidden;
+}
+.bkt-match::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--border);
+}
+.bkt-match.played::before { background: var(--green-mid); }
+.bkt-match:active { transform: scale(0.97); }
+
+.bkt-match-time {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  padding: 5px 10px 3px 12px;
+  letter-spacing: 0.02em;
+}
+.bkt-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px 4px 12px;
+  gap: 6px;
+  border-top: 1px solid var(--border);
+}
+.bkt-team:first-of-type { border-top: none; }
+.bkt-team-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+.bkt-team-name.tbd { color: var(--text-3); font-style: italic; }
+.bkt-team-name.winner { color: var(--green-mid); }
+.bkt-team-score {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-3);
+  min-width: 16px;
+  text-align: right;
+}
+.bkt-team-score.winner { color: var(--green-mid); }
+.bkt-match-venue {
+  font-size: 8px;
+  color: var(--text-3);
+  padding: 2px 10px 5px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-top: 1px solid var(--border);
+}
+
+/* Finals/SF layout — centered vertically */
+.bracket-round.final-round .bracket-slots {
+  justify-content: center;
+  flex: 1;
+}
+
+/* ════════════════════════════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════════════════════════════ */
 @media (max-width: 390px) {
