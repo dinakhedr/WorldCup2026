@@ -383,13 +383,6 @@ function matchCardHTML(m, opts = {}) {
         ${penBadge}
       </div>
       </div>
-      <div class="card-bottom">
-        <span class="venue-txt">📍 ${venueStr}</span>
-        <div style="display:flex;align-items:center;gap:6px;">
-          ${penBadge}
-          ${(m.status === 'Played' && (m.homeYellow || m.homeRed || m.awayYellow || m.awayRed)) ? `<div class="cards-row">${m.homeYellow ? `<span class="card-pill">🟨×${m.homeYellow}</span>` : ''}${m.homeRed ? `<span class="card-pill">🟥×${m.homeRed}</span>` : ''}${(m.awayYellow || m.awayRed) ? `<span class="card-pill-sep">·</span>` : ''}${m.awayYellow ? `<span class="card-pill">🟨×${m.awayYellow}</span>` : ''}${m.awayRed ? `<span class="card-pill">🟥×${m.awayRed}</span>` : ''}</div>` : ''}
-        </div>
-      </div>
     </div>`;
 }
 
