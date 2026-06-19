@@ -105,7 +105,7 @@ function computeGroupStandings(groupId, matches) {
   const teams = GROUPS_TEAMS[groupId] || [];
   const stats = {};
   teams.forEach(team => {
-    stats[team] = { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0 };
+    stats[team] = { played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0, fairPlay: 0 };
   });
 
   matches.forEach(m => {
@@ -138,18 +138,62 @@ function computeGroupStandings(groupId, matches) {
       stats[home].points += 1;
       stats[away].points += 1;
     }
+
+    // Fair play: yellow=-1, red=-3, yellow+red (2nd yellow)=-3
+    const hY = parseInt(m.homeYellow) || 0;
+    const hR = parseInt(m.homeRed)    || 0;
+    const aY = parseInt(m.awayYellow) || 0;
+    const aR = parseInt(m.awayRed)    || 0;
+    stats[home].fairPlay += (hY * -1) + (hR * -3);
+    stats[away].fairPlay += (aY * -1) + (aR * -3);
   });
 
   for (let team in stats) {
     stats[team].gd = stats[team].gf - stats[team].ga;
   }
 
+  // Head-to-head stats between a subset of tied teams
+  function getH2H(tiedTeams) {
+    const h2h = {};
+    tiedTeams.forEach(t => { h2h[t] = { points: 0, gd: 0, gf: 0 }; });
+    matches.forEach(m => {
+      if (m.status !== 'Played') return;
+      if (!tiedTeams.includes(m.home) || !tiedTeams.includes(m.away)) return;
+      const hg = parseInt(m.homeScore) || 0;
+      const ag = parseInt(m.awayScore) || 0;
+      h2h[m.home].gf += hg;
+      h2h[m.home].gd += hg - ag;
+      h2h[m.away].gf += ag;
+      h2h[m.away].gd += ag - hg;
+      if (hg > ag) { h2h[m.home].points += 3; }
+      else if (ag > hg) { h2h[m.away].points += 3; }
+      else { h2h[m.home].points += 1; h2h[m.away].points += 1; }
+    });
+    return h2h;
+  }
+
   let standings = teams.map(team => ({ team, ...stats[team] }));
-  standings.sort((a,b) => {
+
+  standings.sort((a, b) => {
+    // 1. Points
     if (a.points !== b.points) return b.points - a.points;
+    // 2. Goal difference
     if (a.gd !== b.gd) return b.gd - a.gd;
-    return b.gf - a.gf;
+    // 3. Goals scored
+    if (a.gf !== b.gf) return b.gf - a.gf;
+    // 4-6. Head-to-head (only valid between exactly 2 tied teams)
+    const tied = standings.filter(t => t.points === a.points && t.gd === a.gd && t.gf === a.gf).map(t => t.team);
+    if (tied.length === 2) {
+      const h2h = getH2H(tied);
+      if (h2h[a.team].points !== h2h[b.team].points) return h2h[b.team].points - h2h[a.team].points;
+      if (h2h[a.team].gd !== h2h[b.team].gd) return h2h[b.team].gd - h2h[a.team].gd;
+      if (h2h[a.team].gf !== h2h[b.team].gf) return h2h[b.team].gf - h2h[a.team].gf;
+    }
+    // 7. Fair play points
+    if (a.fairPlay !== b.fairPlay) return b.fairPlay - a.fairPlay;
+    return 0;
   });
+
   return standings;
 }
 
