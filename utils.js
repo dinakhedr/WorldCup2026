@@ -461,14 +461,14 @@ function openScoreModal(matchNum) {
   document.getElementById('lblHome').textContent    = m.home;
   document.getElementById('lblAway').textContent    = m.away;
 
-  document.getElementById('inpHome').value  = m.homeScore !== '' ? m.homeScore : '';
-  document.getElementById('inpAway').value  = m.awayScore !== '' ? m.awayScore : '';
-  document.getElementById('inpPenH').value  = m.penH !== '' ? m.penH : '';
-  document.getElementById('inpPenA').value  = m.penA !== '' ? m.penA : '';
-  document.getElementById('inpHomeYellow').value = m.homeYellow || '';
-  document.getElementById('inpHomeRed').value    = m.homeRed    || '';
-  document.getElementById('inpAwayYellow').value = m.awayYellow || '';
-  document.getElementById('inpAwayRed').value    = m.awayRed    || '';
+  document.getElementById('inpHome').value  = m.homeScore !== '' ? m.homeScore : '0';
+  document.getElementById('inpAway').value  = m.awayScore !== '' ? m.awayScore : '0';
+  document.getElementById('inpPenH').value  = m.penH !== '' ? m.penH : '0';
+  document.getElementById('inpPenA').value  = m.penA !== '' ? m.penA : '0';
+  document.getElementById('inpHomeYellow').value = m.homeYellow || '0';
+  document.getElementById('inpHomeRed').value    = m.homeRed    || '0';
+  document.getElementById('inpAwayYellow').value = m.awayYellow || '0';
+  document.getElementById('inpAwayRed').value    = m.awayRed    || '0';
 
   document.getElementById('penSection').style.display = isKO ? 'block' : 'none';
   document.getElementById('scoreModal').classList.add('open');
