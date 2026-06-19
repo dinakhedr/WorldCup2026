@@ -53,14 +53,13 @@
       <div class="mini-stat"><div class="mini-stat-val" id="msTotal">104</div><div class="mini-stat-lbl">Total</div></div>
     </div>
 
-    <div class="filter-section">
-      <div class="search-wrap">
-        <div class="search-inner">
-          <span class="search-icon">🔍</span>
-          <input class="search-input" id="searchInput" placeholder="Search team, venue, city…" oninput="applyFilters()">
-        </div>
-      </div>
+<div class="filter-section">
       <div class="chips-scroll" id="chipsContainer"></div>
+      <div style="padding: 0 16px 10px;">
+        <select id="teamDropdown" class="team-dropdown" onchange="applyFilters()">
+          <option value="">All Teams</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -111,21 +110,14 @@ function setFilter(f, el) {
 }
 
 function applyFilters() {
-  const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  const teamFilter = (document.getElementById('teamDropdown').value || '').trim();
   let list = window._allMatches || [];
   if (activeFilter === 'upcoming') list = list.filter(m => m.status !== 'Played');
   else if (activeFilter === 'played') list = list.filter(m => m.status === 'Played');
   else if (activeFilter === 'knockout') list = list.filter(m => m.isKO);
   else if (activeFilter !== 'all') list = list.filter(m => m.group === activeFilter);
-  if (q) {
-    list = list.filter(m =>
-      m.home.toLowerCase().includes(q) ||
-      m.away.toLowerCase().includes(q) ||
-      m.venue.toLowerCase().includes(q) ||
-      m.city.toLowerCase().includes(q) ||
-      m.country.toLowerCase().includes(q) ||
-      (m.group || '').toLowerCase().includes(q)
-    );
+  if (teamFilter) {
+    list = list.filter(m => m.home === teamFilter || m.away === teamFilter);
   }
   renderList(list);
 }
@@ -167,6 +159,13 @@ function updateMiniStats() {
   document.getElementById('msGoals').textContent = goals;
   document.getElementById('msLeft').textContent = upcoming;
   document.getElementById('msTotal').textContent = all.length;
+
+  // Populate team dropdown
+  const teams = [...new Set(all.flatMap(m => [m.home, m.away]))].sort();
+  const sel = document.getElementById('teamDropdown');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All Teams</option>' +
+    teams.map(t => `<option value="${escHtml(t)}"${t === current ? ' selected' : ''}>${escHtml(t)}</option>`).join('');
 }
 
 window.onload = async function() {
