@@ -374,7 +374,10 @@ function matchCardHTML(m, opts = {}) {
       </div>
       <div class="card-bottom">
         <span class="venue-txt">📍 ${venueStr}</span>
-        ${penBadge}
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${penBadge}
+          ${(m.status === 'Played' && (m.homeYellow || m.homeRed || m.awayYellow || m.awayRed)) ? `<div class="cards-row">${m.homeYellow ? `<span class="card-pill">🟨×${m.homeYellow}</span>` : ''}${m.homeRed ? `<span class="card-pill">🟥×${m.homeRed}</span>` : ''}${(m.awayYellow || m.awayRed) ? `<span class="card-pill-sep">·</span>` : ''}${m.awayYellow ? `<span class="card-pill">🟨×${m.awayYellow}</span>` : ''}${m.awayRed ? `<span class="card-pill">🟥×${m.awayRed}</span>` : ''}</div>` : ''}
+        </div>
       </div>
     </div>`;
 }
@@ -410,6 +413,19 @@ function renderScoreModalHTML() {
           <input class="pen-inp" id="inpPenH" type="number" min="0" max="20" placeholder="—" inputmode="numeric">
           <div class="score-vs-lbl" style="color:#92400e;">vs</div>
           <input class="pen-inp" id="inpPenA" type="number" min="0" max="20" placeholder="—" inputmode="numeric">
+        </div>
+      </div>
+      <div class="cards-section">
+        <div class="cards-title">🟨 🟥 Cards</div>
+        <div class="cards-inputs-row">
+          <input class="card-inp yellow" id="inpHomeYellow" type="number" min="0" max="20" placeholder="0" inputmode="numeric">
+          <span class="card-emoji">🟨</span>
+          <input class="card-inp yellow" id="inpAwayYellow" type="number" min="0" max="20" placeholder="0" inputmode="numeric">
+        </div>
+        <div class="cards-inputs-row" style="margin-top:8px;">
+          <input class="card-inp red" id="inpHomeRed" type="number" min="0" max="20" placeholder="0" inputmode="numeric">
+          <span class="card-emoji">🟥</span>
+          <input class="card-inp red" id="inpAwayRed" type="number" min="0" max="20" placeholder="0" inputmode="numeric">
         </div>
       </div>
       <div class="modal-footer">
@@ -449,6 +465,10 @@ function openScoreModal(matchNum) {
   document.getElementById('inpAway').value  = m.awayScore !== '' ? m.awayScore : '';
   document.getElementById('inpPenH').value  = m.penH !== '' ? m.penH : '';
   document.getElementById('inpPenA').value  = m.penA !== '' ? m.penA : '';
+  document.getElementById('inpHomeYellow').value = m.homeYellow || '';
+  document.getElementById('inpHomeRed').value    = m.homeRed    || '';
+  document.getElementById('inpAwayYellow').value = m.awayYellow || '';
+  document.getElementById('inpAwayRed').value    = m.awayRed    || '';
 
   document.getElementById('penSection').style.display = isKO ? 'block' : 'none';
   document.getElementById('scoreModal').classList.add('open');
@@ -506,6 +526,17 @@ async function saveScoreResult() {
       }
     }
 
+    const hy = parseInt(document.getElementById('inpHomeYellow').value) || 0;
+    const hr = parseInt(document.getElementById('inpHomeRed').value)    || 0;
+    const ay = parseInt(document.getElementById('inpAwayYellow').value) || 0;
+    const ar = parseInt(document.getElementById('inpAwayRed').value)    || 0;
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_GM}!P${sheetRow}:S${sheetRow}`,
+      valueInputOption: 'RAW',
+      resource: { values: [[hy, hr, ay, ar]] }
+    });
+    
     closeScoreModal();
     showToast('✅ Result saved!');
     _invalidateMatchCache();
@@ -529,7 +560,7 @@ async function clearScoreResult() {
     try {
       await gapi.client.sheets.spreadsheets.values.clear({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_GM}!F${sheetRow}:I${sheetRow}`
+        range: `${SHEET_GM}!F${sheetRow}:S${sheetRow}`
       });
       _invalidateMatchCache();
       closeScoreModal();
