@@ -366,7 +366,7 @@ function matchCardHTML(m, opts = {}) {
             ? '<span class="played-dot"></span>FT'
             : `${dateLine}${timeStr} Cairo`}</span>
         </div>
-<div class="teams-row">
+        <div class="teams-row">
           <div style="display:flex;flex-direction:column;gap:3px;">
             <div class="${homeClass}">${escHtml(m.home)}</div>
             ${m.status === 'Played' && (m.homeYellow || m.homeRed) ? `<div class="match-cards-home">${m.homeYellow ? `<span class="card-pill">🟨×${m.homeYellow}</span>` : ''}${m.homeRed ? `<span class="card-pill">🟥×${m.homeRed}</span>` : ''}</div>` : ''}
@@ -377,6 +377,11 @@ function matchCardHTML(m, opts = {}) {
             ${m.status === 'Played' && (m.awayYellow || m.awayRed) ? `<div class="match-cards-away">${m.awayYellow ? `<span class="card-pill">🟨×${m.awayYellow}</span>` : ''}${m.awayRed ? `<span class="card-pill">🟥×${m.awayRed}</span>` : ''}</div>` : ''}
           </div>
         </div>
+      </div>
+      <div class="card-bottom">
+        <span class="venue-txt">📍 ${venueStr}</span>
+        ${penBadge}
+      </div>
       </div>
       <div class="card-bottom">
         <span class="venue-txt">📍 ${venueStr}</span>
