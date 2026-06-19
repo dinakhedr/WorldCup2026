@@ -602,7 +602,12 @@ body {
 }
 .btn-save:active   { opacity: 0.88; }
 .btn-save:disabled { opacity: 0.55; cursor: not-allowed; }
-
+.bell-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; padding: 0; line-height: 1;
+  flex-shrink: 0;
+}
+.bell-btn:active { transform: scale(0.85); }
 /* ════════════════════════════════════════════════════════════
    STANDINGS TABLE
    ════════════════════════════════════════════════════════════ */
