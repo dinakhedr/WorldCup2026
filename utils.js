@@ -261,10 +261,10 @@ function parseGMRow(row, rowIndex) {
     country:   (row[12] || '').trim(),
     winner:    (row[13] || '-').trim(),
     status:    (row[14] || 'Upcoming').trim(),
-    homeYellow: parseInt(r[15]) || 0,
-    homeRed:    parseInt(r[16]) || 0,
-    awayYellow: parseInt(r[17]) || 0,
-    awayRed:    parseInt(r[18]) || 0,
+    homeYellow: parseInt(row[15]) || 0,
+    homeRed:    parseInt(row[16]) || 0,
+    awayYellow: parseInt(row[17]) || 0,
+    awayRed:    parseInt(row[18]) || 0,
   };
 }
 
@@ -291,7 +291,7 @@ async function loadAllMatches(forceRefresh = false) {
   try {
     res = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_GM}!A:O`
+      range: `${SHEET_GM}!A:S`
     });
   } catch(e) {
     // Token likely expired — clear it so next call re-auths
