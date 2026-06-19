@@ -422,7 +422,8 @@ body {
 }
 .match-card:active { transform: scale(0.985); }
 .match-card.played { background: #f8fef9; }
-
+.match-cards-home { display: flex; gap: 4px; }
+.match-cards-away { display: flex; gap: 4px; justify-content: flex-end; }
 .card-inner { padding: 11px 13px 11px 17px; }
 
 .card-top {
