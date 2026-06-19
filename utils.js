@@ -261,6 +261,10 @@ function parseGMRow(row, rowIndex) {
     country:   (row[12] || '').trim(),
     winner:    (row[13] || '-').trim(),
     status:    (row[14] || 'Upcoming').trim(),
+    homeYellow: parseInt(r[15]) || 0,
+    homeRed:    parseInt(r[16]) || 0,
+    awayYellow: parseInt(r[17]) || 0,
+    awayRed:    parseInt(r[18]) || 0,
   };
 }
 
