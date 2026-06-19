@@ -356,15 +356,19 @@ function matchCardHTML(m, opts = {}) {
   const penBadge  = (played && m.penH !== '' && m.penA !== '')
     ? `<span class="pen-badge">Pen ${m.penH}–${m.penA}</span>` : '';
   const dateLine  = showDate ? `<span class="match-date-inline">${m.date} · </span>` : '';
-
+  const isUpcoming = m.status !== 'Played';
+  const notifActive = isUpcoming && isNotifScheduled(m.num);
+  const bellBtn = isUpcoming
+    ? `<button class="bell-btn" data-notif-btn="${m.num}" onclick="event.stopPropagation();toggleMatchNotification(${m.num})" style="opacity:${notifActive ? '1' : '0.5'};">${notifActive ? '🔔' : '🔕'}</button>`
+    : '';
   return `
     <div class="match-card${played ? ' played' : ''}" style="--card-acc:${acc}" onclick="${onclick}">
       <div class="card-inner">
         <div class="card-top">
           <span class="stage-badge" style="background:${badgeBg};color:${badgeTxt}">${badgeLabel}</span>
-          <span class="match-time">${played
+          <span class="match-time" style="display:flex;align-items:center;gap:6px;">${played
             ? '<span class="played-dot"></span>FT'
-            : `${dateLine}${timeStr} Cairo`}</span>
+            : `${dateLine}${timeStr} Cairo`}${bellBtn}</span>
         </div>
         <div class="teams-row">
           <div style="display:flex;flex-direction:column;gap:3px;">
@@ -592,7 +596,133 @@ async function clearScoreResult() {
     }, 3000);
   }
 }
+// ── Notifications ──────────────────────────────────────────
+const _NOTIF_KEY = 'wc_notifications';
 
+function getScheduledNotifs() {
+  try { return JSON.parse(localStorage.getItem(_NOTIF_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function saveScheduledNotifs(obj) {
+  localStorage.setItem(_NOTIF_KEY, JSON.stringify(obj));
+}
+
+function isNotifScheduled(matchNum) {
+  return !!getScheduledNotifs()[matchNum];
+}
+
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    return reg;
+  } catch(e) { console.warn('SW register failed', e); return null; }
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+function scheduleLocalNotif(title, body, fireAtMs, tag) {
+  const delayMs = fireAtMs - Date.now();
+  if (delayMs <= 0) return;
+  setTimeout(() => {
+    if (Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/images/icon-192.png',
+        tag,
+      });
+    }
+  }, delayMs);
+}
+
+function matchKickoffMs(m) {
+  // m.date = "11-Jun-26", m.time = "22:00" Cairo (UTC+3)
+  try {
+    const parts = m.date.split('-');
+    const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+    const day   = parseInt(parts[0]);
+    const month = months[parts[1]];
+    const year  = 2000 + parseInt(parts[2]);
+    const [hh, mm] = m.time.split(':').map(Number);
+    // Cairo is UTC+3
+    const utcMs = Date.UTC(year, month, day, hh - 3, mm);
+    return utcMs;
+  } catch(e) { return null; }
+}
+
+async function toggleMatchNotification(matchNum) {
+  const matches = window._allMatches || [];
+  const m = matches.find(x => x.num === matchNum);
+  if (!m) return;
+
+  const notifs = getScheduledNotifs();
+
+  if (notifs[matchNum]) {
+    // Cancel — just remove from storage (can't cancel setTimeout across sessions)
+    delete notifs[matchNum];
+    saveScheduledNotifs(notifs);
+    showToast('🔕 Notification removed');
+    refreshBellIcon(matchNum, false);
+    return;
+  }
+
+  const granted = await requestNotifPermission();
+  if (!granted) { showToast('Notifications blocked', 'error'); return; }
+
+  const kickoffMs = matchKickoffMs(m);
+  if (!kickoffMs) { showToast('Could not schedule', 'error'); return; }
+
+  const beforeMs  = kickoffMs - (15 * 60 * 1000);
+  const afterMs   = kickoffMs + (105 * 60 * 1000);
+  const matchLabel = `${m.home} vs ${m.away}`;
+
+  scheduleLocalNotif(
+    '⚽ Match Starting Soon',
+    `${matchLabel} kicks off in 15 minutes!`,
+    beforeMs,
+    `wc-before-${matchNum}`
+  );
+  scheduleLocalNotif(
+    '🏁 Match Ended',
+    `${matchLabel} has ended. Check the result!`,
+    afterMs,
+    `wc-after-${matchNum}`
+  );
+
+  notifs[matchNum] = { beforeMs, afterMs, label: matchLabel };
+  saveScheduledNotifs(notifs);
+  showToast('🔔 Notifications set!');
+  refreshBellIcon(matchNum, true);
+}
+
+function refreshBellIcon(matchNum, active) {
+  const btn = document.querySelector(`[data-notif-btn="${matchNum}"]`);
+  if (btn) {
+    btn.textContent = active ? '🔔' : '🔕';
+    btn.style.opacity = active ? '1' : '0.5';
+  }
+}
+
+function restoreScheduledNotifs() {
+  const notifs = getScheduledNotifs();
+  const now = Date.now();
+  for (const [matchNum, n] of Object.entries(notifs)) {
+    const m = (window._allMatches || []).find(x => x.num === parseInt(matchNum));
+    if (!m) continue;
+    const matchLabel = `${m.home} vs ${m.away}`;
+    if (n.beforeMs > now) {
+      scheduleLocalNotif('⚽ Match Starting Soon', `${matchLabel} kicks off in 15 minutes!`, n.beforeMs, `wc-before-${matchNum}`);
+    }
+    if (n.afterMs > now) {
+      scheduleLocalNotif('🏁 Match Ended', `${matchLabel} has ended. Check the result!`, n.afterMs, `wc-after-${matchNum}`);
+    }
+  }
+}
 // ── Sign out ───────────────────────────────────────────────
 function doSignOut() {
   if (!confirm('Sign out of World Cup 2026?')) return;
