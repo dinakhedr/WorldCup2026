@@ -54,13 +54,33 @@
     </div>
 
 <div class="filter-section">
-            <div style="padding: 0 16px 10px;">
+      <div style="padding: 0 16px 6px;">
         <select id="teamDropdown" class="team-dropdown" onchange="applyFilters()">
           <option value="">All Teams</option>
         </select>
       </div>
-      <div class="chips-scroll" id="chipsContainer"></div>
-
+      <div style="padding: 0 16px 10px;">
+        <select id="groupDropdown" class="team-dropdown" onchange="applyFilters()">
+          <option value="all">All Matches</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="played">Played</option>
+          <option disabled>──────────</option>
+          <option value="A">Group A</option>
+          <option value="B">Group B</option>
+          <option value="C">Group C</option>
+          <option value="D">Group D</option>
+          <option value="E">Group E</option>
+          <option value="F">Group F</option>
+          <option value="G">Group G</option>
+          <option value="H">Group H</option>
+          <option value="I">Group I</option>
+          <option value="J">Group J</option>
+          <option value="K">Group K</option>
+          <option value="L">Group L</option>
+          <option disabled>──────────</option>
+          <option value="knockout">⚡ Knockout</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -78,45 +98,16 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let activeFilter = 'all';
 window._onScoreSaved = async function() { await syncMatches(true); };
 
-function buildChips() {
-  const container = document.getElementById('chipsContainer');
-  if (!container) return;
-  const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
-  let chipsHTML = `
-    <div class="chip active" data-filter="all">All</div>
-    <div class="chip" data-filter="upcoming">Upcoming</div>
-    <div class="chip" data-filter="played">Played</div>
-  `;
-  for (let g of groups) {
-    chipsHTML += `<div class="chip chip-group-${g.toLowerCase()}" data-filter="${g}">Group ${g}</div>`;
-  }
-  chipsHTML += `<div class="chip chip-knockout" data-filter="knockout">⚡ Knockout</div>`;
-  container.innerHTML = chipsHTML;
-  document.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const filter = chip.getAttribute('data-filter');
-      setFilter(filter, chip);
-    });
-  });
-}
-
-function setFilter(f, el) {
-  activeFilter = f;
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  applyFilters();
-}
-
 function applyFilters() {
-  const teamFilter = (document.getElementById('teamDropdown').value || '').trim();
+  const teamFilter  = (document.getElementById('teamDropdown').value  || '').trim();
+  const groupFilter = (document.getElementById('groupDropdown').value || 'all').trim();
   let list = window._allMatches || [];
-  if (activeFilter === 'upcoming') list = list.filter(m => m.status !== 'Played');
-  else if (activeFilter === 'played') list = list.filter(m => m.status === 'Played');
-  else if (activeFilter === 'knockout') list = list.filter(m => m.isKO);
-  else if (activeFilter !== 'all') list = list.filter(m => m.group === activeFilter);
+  if (groupFilter === 'upcoming')      list = list.filter(m => m.status !== 'Played');
+  else if (groupFilter === 'played')   list = list.filter(m => m.status === 'Played');
+  else if (groupFilter === 'knockout') list = list.filter(m => m.isKO);
+  else if (groupFilter !== 'all')      list = list.filter(m => m.group === groupFilter);
   if (teamFilter) {
     list = list.filter(m => m.home === teamFilter || m.away === teamFilter);
   }
@@ -176,7 +167,6 @@ window.onload = async function() {
     onReady: async () => {
       window._allMatches = await loadAllMatches();
       updateMiniStats();
-      buildChips();
       applyFilters();
       showMainApp();
     }
