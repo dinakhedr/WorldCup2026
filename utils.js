@@ -819,7 +819,8 @@ function computeGroupStandings(groupId, allMatches) {
 
 function isGroupComplete(groupId, allMatches) {
   const gm = allMatches.filter(m => m.group === groupId);
-  return gm.length > 0 && gm.every(m => m.status === 'Played');
+  const played = gm.filter(m => m.status === 'Played').length;
+  return gm.length > 0 && played >= 6;
 }
 
 function buildAllStandings(allMatches) {
@@ -850,9 +851,13 @@ function resolveBestThird(eligibleStr, thirdPlaceTeams, allMatches) {
 }
 
 function resolveR32Slot(slot, standings, thirdPlaceTeams, allMatches) {
-  if (slot.rank === '3') return resolveBestThird(slot.grp, thirdPlaceTeams, allMatches);
-  if (!isGroupComplete(slot.grp, allMatches)) return null;
+  if (slot.rank === '3') {
+    return resolveBestThird(slot.grp, thirdPlaceTeams, allMatches);
+  }
   const st = standings[slot.grp];
   if (!st) return null;
-  return st[slot.rank === '1' ? 0 : 1]?.team || null;
+  const idx = slot.rank === '1' ? 0 : 1;
+  const team = st[idx];
+  if (!team || team.played === 0) return null;
+  return team.team;
 }

@@ -87,23 +87,132 @@ const R32_FIXTURES = [
   { num:88,  home:{grp:'D', rank:'2', label:'Group D — 2nd'}, away:{grp:'G', rank:'2', label:'Group G — 2nd'},         date:'04-Jul-26', time:'09:00', city:'Dallas'       },
 ];
 
+/* ── Compute group standings from matches (reused from Groups.html) ── */
+function computeGroupStandings(groupId, matches) {
+  const teams = GROUPS_TEAMS[groupId] || [];
+  const stats = {};
+  teams.forEach(t => { stats[t] = { played:0, wins:0, draws:0, losses:0, gf:0, ga:0, gd:0, points:0, fairPlay:0 }; });
+
+  matches.forEach(m => {
+    if (m.status !== 'Played') return;
+    const h = m.home, a = m.away;
+    if (!stats[h] || !stats[a]) return;
+    const hg = parseInt(m.homeScore)||0, ag = parseInt(m.awayScore)||0;
+    stats[h].played++; stats[a].played++;
+    stats[h].gf += hg; stats[h].ga += ag;
+    stats[a].gf += ag; stats[a].ga += hg;
+    if (hg > ag)      { stats[h].wins++; stats[a].losses++; stats[h].points += 3; }
+    else if (ag > hg) { stats[a].wins++; stats[h].losses++; stats[a].points += 3; }
+    else              { stats[h].draws++; stats[a].draws++; stats[h].points++; stats[a].points++; }
+    stats[h].fairPlay += (parseInt(m.homeYellow)||0)*-1 + (parseInt(m.homeRed)||0)*-3;
+    stats[a].fairPlay += (parseInt(m.awayYellow)||0)*-1 + (parseInt(m.awayRed)||0)*-3;
+  });
+  for (let t in stats) stats[t].gd = stats[t].gf - stats[t].ga;
+
+  function getH2H(tied) {
+    const h2h = {};
+    tied.forEach(t => { h2h[t] = { points:0, gd:0, gf:0 }; });
+    matches.forEach(m => {
+      if (m.status !== 'Played' || !tied.includes(m.home) || !tied.includes(m.away)) return;
+      const hg = parseInt(m.homeScore)||0, ag = parseInt(m.awayScore)||0;
+      h2h[m.home].gf += hg; h2h[m.home].gd += hg-ag;
+      h2h[m.away].gf += ag; h2h[m.away].gd += ag-hg;
+      if (hg > ag) h2h[m.home].points += 3;
+      else if (ag > hg) h2h[m.away].points += 3;
+      else { h2h[m.home].points++; h2h[m.away].points++; }
+    });
+    return h2h;
+  }
+
+  let standings = teams.map(t => ({ team:t, ...stats[t] }));
+  standings.sort((a, b) => {
+    if (a.points !== b.points) return b.points - a.points;
+    if (a.gd !== b.gd) return b.gd - a.gd;
+    if (a.gf !== b.gf) return b.gf - a.gf;
+    const tied = standings.filter(t => t.points===a.points && t.gd===a.gd && t.gf===a.gf).map(t=>t.team);
+    if (tied.length === 2) {
+      const h2h = getH2H(tied);
+      if (h2h[a.team].points !== h2h[b.team].points) return h2h[b.team].points - h2h[a.team].points;
+      if (h2h[a.team].gd !== h2h[b.team].gd) return h2h[b.team].gd - h2h[a.team].gd;
+      if (h2h[a.team].gf !== h2h[b.team].gf) return h2h[b.team].gf - h2h[a.team].gf;
+    }
+    if (a.fairPlay !== b.fairPlay) return b.fairPlay - a.fairPlay;
+    return 0;
+  });
+  return standings;
+}
+
+/* ── Resolve best 3rd-place team from eligible groups ── */
+function resolveBestThird(eligibleGroups, thirdPlaceTeams) {
+  const eligible = eligibleGroups.split('/');
+  let best = null;
+  for (const grp of eligible) {
+    const t = thirdPlaceTeams[grp];
+    if (!t) continue;
+    if (!best) { best = t; continue; }
+    if (t.points > best.points) { best = t; continue; }
+    if (t.points === best.points) {
+      if (t.gd > best.gd) { best = t; continue; }
+      if (t.gd === best.gd && t.gf > best.gf) { best = t; continue; }
+    }
+  }
+  return best ? best.team : null;
+}
+
+/* ── Check if all matches in a group are played ── */
+function isGroupComplete(groupId, allMatches) {
+  const gm = allMatches.filter(m => m.group === groupId);
+  return gm.length > 0 && gm.every(m => m.status === 'Played');
+}
+
+/* ── Resolve a slot to a team name ── */
+function resolveSlot(slot, standings, thirdPlaceTeams, allMatches) {
+  if (slot.rank === '3') {
+    return resolveAllGroupsComplete(slot.grp, allMatches)
+      ? resolveBestThird(slot.grp, thirdPlaceTeams)
+      : null;
+  }
+  const grp = slot.grp;
+  if (!isGroupComplete(grp, allMatches)) return null;
+  const st = standings[grp];
+  if (!st) return null;
+  const idx = slot.rank === '1' ? 0 : 1;
+  return st[idx] ? st[idx].team : null;
+}
+
+function resolveAllGroupsComplete(eligibleStr, allMatches) {
+  return eligibleStr.split('/').every(g => isGroupComplete(g, allMatches));
+}
+
 /* ── Render ── */
 function renderSeeding(allMatches) {
-  const { standings, thirdPlaceTeams } = buildAllStandings(allMatches);
+  // Build standings per group
+  const standings = {};
+  const thirdPlaceTeams = {};
+  for (const grp of ['A','B','C','D','E','F','G','H','I','J','K','L']) {
+    const gm = allMatches.filter(m => m.group === grp);
+    standings[grp] = computeGroupStandings(grp, gm);
+    if (standings[grp][2]) {
+      thirdPlaceTeams[grp] = standings[grp][2];
+    }
+  }
 
   let confirmed = 0, pending = 0;
   let currentDate = null;
   let html = '';
 
   R32_FIXTURES.forEach(fix => {
-    const homeTeam = resolveR32Slot(fix.home, standings, thirdPlaceTeams, allMatches);
-    const awayTeam = resolveR32Slot(fix.away, standings, thirdPlaceTeams, allMatches);
+    const homeTeam = resolveSlot(fix.home, standings, thirdPlaceTeams, allMatches);
+    const awayTeam = resolveSlot(fix.away, standings, thirdPlaceTeams, allMatches);
 
     const bothKnown  = homeTeam && awayTeam;
     const oneKnown   = (homeTeam || awayTeam) && !bothKnown;
-    const cardStatus = bothKnown ? 'confirmed' : oneKnown ? 'partial' : 'pending';
+    const homeConfirmed = fix.home.rank === '3' ? false : isGroupComplete(fix.home.grp, allMatches);
+    const awayConfirmed = fix.away.rank === '3' ? false : isGroupComplete(fix.away.grp, allMatches);
+    const fullyConfirmed = bothKnown && homeConfirmed && awayConfirmed;
+    const cardStatus = fullyConfirmed ? 'confirmed' : bothKnown || oneKnown ? 'partial' : 'pending';
 
-    if (bothKnown) confirmed++; else pending++;
+    if (fullyConfirmed) confirmed++; else pending++;
 
     // Date label
     if (fix.date !== currentDate) {
