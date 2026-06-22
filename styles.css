@@ -803,7 +803,7 @@ body {
 .seeding-team-row:last-of-type { border-bottom: none; }
 
 .seeding-seed-label {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-3);
   width: 100px;
   flex-shrink: 0;
