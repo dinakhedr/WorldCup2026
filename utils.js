@@ -894,10 +894,7 @@ function resolveR32Slot(slot, standings, thirdPlaceTeams, allMatches) {
   if (!st) return null;
   const idx = slot.rank === '1' ? 0 : 1;
   const team = st[idx];
+  // Show the team if they have played at least one match
   if (!team || team.played === 0) return null;
-  // If group complete, return final result
-  if (isGroupComplete(slot.grp, allMatches)) return team.team;
-  // Otherwise only show if mathematically secured
-  if (isTeamSecured(team.team, idx, slot.grp, allMatches)) return team.team;
-  return null;
+  return team.team;  // always show current leader/runner‑up
 }
