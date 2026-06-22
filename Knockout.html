@@ -280,122 +280,6 @@
 <script>
 window._onScoreSaved = async function() { await loadKnockout(); };
 
-/* ── R32 seeding table (fixed by FIFA) ── */
-const R32_SEEDING = {
-  73:  { home:{grp:'A', rank:'2'}, away:{grp:'B', rank:'2'} },
-  74:  { home:{grp:'E', rank:'1'}, away:{grp:'A/B/C/D/F', rank:'3'} },
-  75:  { home:{grp:'F', rank:'1'}, away:{grp:'C', rank:'2'} },
-  76:  { home:{grp:'C', rank:'1'}, away:{grp:'F', rank:'2'} },
-  77:  { home:{grp:'I', rank:'1'}, away:{grp:'C/D/F/G/H', rank:'3'} },
-  78:  { home:{grp:'E', rank:'2'}, away:{grp:'I', rank:'2'} },
-  79:  { home:{grp:'A', rank:'1'}, away:{grp:'C/E/F/H/I', rank:'3'} },
-  80:  { home:{grp:'L', rank:'1'}, away:{grp:'E/H/I/J/K', rank:'3'} },
-  81:  { home:{grp:'D', rank:'1'}, away:{grp:'B/E/F/I/J', rank:'3'} },
-  82:  { home:{grp:'G', rank:'1'}, away:{grp:'A/E/H/I/J', rank:'3'} },
-  83:  { home:{grp:'K', rank:'2'}, away:{grp:'L', rank:'2'} },
-  84:  { home:{grp:'H', rank:'1'}, away:{grp:'J', rank:'2'} },
-  85:  { home:{grp:'B', rank:'1'}, away:{grp:'E/F/G/I/J', rank:'3'} },
-  86:  { home:{grp:'J', rank:'1'}, away:{grp:'H', rank:'2'} },
-  87:  { home:{grp:'K', rank:'1'}, away:{grp:'D/E/I/J/L', rank:'3'} },
-  88:  { home:{grp:'D', rank:'2'}, away:{grp:'G', rank:'2'} },
-};
-
-/* ── Compute standings for a single group ── */
-function computeStandingsForGroup(groupId, allMatches) {
-  const teams = GROUPS_TEAMS[groupId] || [];
-  const stats = {};
-  teams.forEach(t => { stats[t] = { played:0, wins:0, draws:0, losses:0, gf:0, ga:0, gd:0, points:0, fairPlay:0 }; });
-
-  allMatches.filter(m => m.group === groupId).forEach(m => {
-    if (m.status !== 'Played') return;
-    const h = m.home, a = m.away;
-    if (!stats[h] || !stats[a]) return;
-    const hg = parseInt(m.homeScore)||0, ag = parseInt(m.awayScore)||0;
-    stats[h].played++; stats[a].played++;
-    stats[h].gf += hg; stats[h].ga += ag;
-    stats[a].gf += ag; stats[a].ga += hg;
-    if (hg > ag)      { stats[h].wins++; stats[a].losses++; stats[h].points += 3; }
-    else if (ag > hg) { stats[a].wins++; stats[h].losses++; stats[a].points += 3; }
-    else              { stats[h].draws++; stats[a].draws++; stats[h].points++; stats[a].points++; }
-    stats[h].fairPlay += (parseInt(m.homeYellow)||0)*-1 + (parseInt(m.homeRed)||0)*-3;
-    stats[a].fairPlay += (parseInt(m.awayYellow)||0)*-1 + (parseInt(m.awayRed)||0)*-3;
-  });
-  for (let t in stats) stats[t].gd = stats[t].gf - stats[t].ga;
-
-  function getH2H(tied) {
-    const h2h = {};
-    tied.forEach(t => { h2h[t] = { points:0, gd:0, gf:0 }; });
-    allMatches.filter(m => m.group === groupId && m.status === 'Played' && tied.includes(m.home) && tied.includes(m.away)).forEach(m => {
-      const hg = parseInt(m.homeScore)||0, ag = parseInt(m.awayScore)||0;
-      h2h[m.home].gf += hg; h2h[m.home].gd += hg-ag;
-      h2h[m.away].gf += ag; h2h[m.away].gd += ag-hg;
-      if (hg > ag) h2h[m.home].points += 3;
-      else if (ag > hg) h2h[m.away].points += 3;
-      else { h2h[m.home].points++; h2h[m.away].points++; }
-    });
-    return h2h;
-  }
-
-  let standings = teams.map(t => ({ team:t, ...stats[t] }));
-  standings.sort((a, b) => {
-    if (a.points !== b.points) return b.points - a.points;
-    if (a.gd !== b.gd) return b.gd - a.gd;
-    if (a.gf !== b.gf) return b.gf - a.gf;
-    const tied = standings.filter(t => t.points===a.points && t.gd===a.gd && t.gf===a.gf).map(t=>t.team);
-    if (tied.length === 2) {
-      const h2h = getH2H(tied);
-      if (h2h[a.team].points !== h2h[b.team].points) return h2h[b.team].points - h2h[a.team].points;
-      if (h2h[a.team].gd !== h2h[b.team].gd) return h2h[b.team].gd - h2h[a.team].gd;
-      if (h2h[a.team].gf !== h2h[b.team].gf) return h2h[b.team].gf - h2h[a.team].gf;
-    }
-    if (a.fairPlay !== b.fairPlay) return b.fairPlay - a.fairPlay;
-    return 0;
-  });
-  return standings;
-}
-
-function isGroupComplete(groupId, allMatches) {
-  const gm = allMatches.filter(m => m.group === groupId);
-  return gm.length > 0 && gm.every(m => m.status === 'Played');
-}
-
-function resolveBestThird(eligibleStr, thirdPlaceTeams, allMatches) {
-  const eligible = eligibleStr.split('/');
-  if (!eligible.every(g => isGroupComplete(g, allMatches))) return null;
-  let best = null;
-  for (const grp of eligible) {
-    const t = thirdPlaceTeams[grp];
-    if (!t) continue;
-    if (!best) { best = t; continue; }
-    if (t.points > best.points) { best = t; continue; }
-    if (t.points === best.points) {
-      if (t.gd > best.gd) { best = t; continue; }
-      if (t.gd === best.gd && t.gf > best.gf) { best = t; continue; }
-    }
-  }
-  return best ? best.team : null;
-}
-
-/* ── Resolve TBD slots in R32 matches from standings ── */
-function resolveR32Teams(allMatches) {
-  const standings = {};
-  const thirdPlaceTeams = {};
-  for (const grp of ['A','B','C','D','E','F','G','H','I','J','K','L']) {
-    standings[grp] = computeStandingsForGroup(grp, allMatches);
-    if (standings[grp][2]) thirdPlaceTeams[grp] = standings[grp][2];
-  }
-
-  function resolveSlot(slot) {
-    if (slot.rank === '3') return resolveBestThird(slot.grp, thirdPlaceTeams, allMatches);
-    if (!isGroupComplete(slot.grp, allMatches)) return null;
-    const st = standings[slot.grp];
-    if (!st) return null;
-    return st[slot.rank === '1' ? 0 : 1]?.team || null;
-  }
-
-  return { resolveSlot };
-}
-
 /* ── Build a single match card ── */
 function buildKOCard(m) {
   if (!m) {
@@ -468,14 +352,14 @@ function renderBracket(matches, allMatches) {
     return;
   }
 
-  // Resolve R32 TBD slots from group standings
-  const { resolveSlot } = resolveR32Teams(allMatches);
+  // Resolve R32 TBD slots from group standings using shared utils
+  const { standings, thirdPlaceTeams } = buildAllStandings(allMatches);
   matches = matches.map(m => {
     if (m.group !== 'Round of 32') return m;
     const seeding = R32_SEEDING[m.num];
     if (!seeding) return m;
-    const resolvedHome = resolveSlot(seeding.home);
-    const resolvedAway = resolveSlot(seeding.away);
+    const resolvedHome = resolveR32Slot(seeding.home, standings, thirdPlaceTeams, allMatches);
+    const resolvedAway = resolveR32Slot(seeding.away, standings, thirdPlaceTeams, allMatches);
     return {
       ...m,
       home: resolvedHome || m.home,
