@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>R32 Seeding · World Cup 2026</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="images/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <link rel="shortcut icon" href="images/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="WC2026">
+  <meta name="theme-color" content="#0D1B3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="utils.js"></script>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="screen active" id="loadingScreen">
+  <div class="screen-card" id="loadingBox">
+    <span class="screen-trophy">🎯</span>
+    <div class="screen-title">R32 Seeding</div>
+    <div class="screen-sub" id="loadingMsg">Loading seeding data…</div>
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display:none;">
+
+  <div class="page-header">
+    <div class="header-row">
+      <div class="header-left">
+        <a class="back-btn" href="Home.html">‹</a>
+        <div class="page-title">🎯 R32 Seeding</div>
+      </div>
+      <div class="header-actions">
+        <button class="hdr-btn" onclick="syncSeeding()" title="Refresh">🔄</button>
+      </div>
+    </div>
+    <div class="mini-stats">
+      <div class="mini-stat"><div class="mini-stat-val" id="statTotal">16</div><div class="mini-stat-lbl">Matches</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="statConfirmed">—</div><div class="mini-stat-lbl">Confirmed</div></div>
+      <div class="mini-stat"><div class="mini-stat-val" id="statPending">—</div><div class="mini-stat-lbl">Pending</div></div>
+    </div>
+  </div>
+
+  <div class="seeding-content" id="seedingContent">
+    <div class="loading-state"><div class="spinner"></div></div>
+  </div>
+
+  <div class="bottom-nav-spacer"></div>
+</div>
+
+<div id="bottomNavMount"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── R32 fixture definitions (fixed by FIFA) ──────────────────
+   Each entry: { num, home: {grp, rank, label}, away: {grp, rank, label}, date, time, city }
+   rank: '1' = winner, '2' = runner-up, '3rd' = best third-place
+   For best-3rd slots, grp holds the eligible groups string e.g. 'C/E/F/H/I'
+*/
+const R32_FIXTURES = [
+  { num:73,  home:{grp:'A', rank:'2', label:'Group A — 2nd'}, away:{grp:'B', rank:'2', label:'Group B — 2nd'},         date:'28-Jun-26', time:'04:00', city:'Los Angeles'   },
+  { num:74,  home:{grp:'E', rank:'1', label:'Group E — 1st'}, away:{grp:'A/B/C/D/F', rank:'3', label:'Best 3rd A/B/C/D/F'}, date:'29-Jun-26', time:'01:00', city:'Boston'     },
+  { num:75,  home:{grp:'F', rank:'1', label:'Group F — 1st'}, away:{grp:'C', rank:'2', label:'Group C — 2nd'},         date:'29-Jun-26', time:'04:00', city:'Monterrey'     },
+  { num:76,  home:{grp:'C', rank:'1', label:'Group C — 1st'}, away:{grp:'F', rank:'2', label:'Group F — 2nd'},         date:'30-Jun-26', time:'01:00', city:'Houston'       },
+  { num:77,  home:{grp:'I', rank:'1', label:'Group I — 1st'}, away:{grp:'C/D/F/G/H', rank:'3', label:'Best 3rd C/D/F/G/H'}, date:'30-Jun-26', time:'04:00', city:'New York NJ'},
+  { num:78,  home:{grp:'E', rank:'2', label:'Group E — 2nd'}, away:{grp:'I', rank:'2', label:'Group I — 2nd'},         date:'30-Jun-26', time:'07:00', city:'Dallas'        },
+  { num:79,  home:{grp:'A', rank:'1', label:'Group A — 1st'}, away:{grp:'C/E/F/H/I', rank:'3', label:'Best 3rd C/E/F/H/I'}, date:'01-Jul-26', time:'10:00', city:'Mexico City'},
+  { num:80,  home:{grp:'L', rank:'1', label:'Group L — 1st'}, away:{grp:'E/H/I/J/K', rank:'3', label:'Best 3rd E/H/I/J/K'}, date:'01-Jul-26', time:'04:00', city:'Atlanta'    },
+  { num:81,  home:{grp:'D', rank:'1', label:'Group D — 1st'}, away:{grp:'B/E/F/I/J', rank:'3', label:'Best 3rd B/E/F/I/J'}, date:'01-Jul-26', time:'07:00', city:'San Francisco'},
+  { num:82,  home:{grp:'G', rank:'1', label:'Group G — 1st'}, away:{grp:'A/E/H/I/J', rank:'3', label:'Best 3rd A/E/H/I/J'}, date:'02-Jul-26', time:'02:00', city:'Seattle'    },
+  { num:83,  home:{grp:'K', rank:'2', label:'Group K — 2nd'}, away:{grp:'L', rank:'2', label:'Group L — 2nd'},         date:'02-Jul-26', time:'06:00', city:'Toronto'      },
+  { num:84,  home:{grp:'H', rank:'1', label:'Group H — 1st'}, away:{grp:'J', rank:'2', label:'Group J — 2nd'},         date:'03-Jul-26', time:'06:00', city:'Los Angeles'  },
+  { num:85,  home:{grp:'B', rank:'1', label:'Group B — 1st'}, away:{grp:'E/F/G/I/J', rank:'3', label:'Best 3rd E/F/G/I/J'}, date:'03-Jul-26', time:'09:00', city:'Vancouver'  },
+  { num:86,  home:{grp:'J', rank:'1', label:'Group J — 1st'}, away:{grp:'H', rank:'2', label:'Group H — 2nd'},         date:'03-Jul-26', time:'03:00', city:'Miami'        },
+  { num:87,  home:{grp:'K', rank:'1', label:'Group K — 1st'}, away:{grp:'D/E/I/J/L', rank:'3', label:'Best 3rd D/E/I/J/L'}, date:'04-Jul-26', time:'04:30', city:'Kansas City' },
+  { num:88,  home:{grp:'D', rank:'2', label:'Group D — 2nd'}, away:{grp:'G', rank:'2', label:'Group G — 2nd'},         date:'04-Jul-26', time:'09:00', city:'Dallas'       },
+];
+
+/* ── Compute group standings from matches (reused from Groups.html) ── */
+function computeGroupStandings(groupId, matches) {
+  const teams = GROUPS_TEAMS[groupId] || [];
+  const stats = {};
+  teams.forEach(t => { stats[t] = { played:0, wins:0, draws:0, losses:0, gf:0, ga:0, gd:0, points:0, fairPlay:0 }; });
+
+  matches.forEach(m => {
+    if (m.status !== 'Played') return;
+    const h = m.home, a = m.away;
+    if (!stats[h] || !stats[a]) return;
+    const hg = parseInt(m.homeScore)||0, ag = parseInt(m.awayScore)||0;
+    stats[h].played++; stats[a].played++;
+    stats[h].gf += hg; stats[h].ga += ag;
+    stats[a].gf += ag; stats[a].ga += hg;
+    if (hg > ag)      { stats[h].wins++; stats[a].losses++; stats[h].points += 3; }
+    else if (ag > hg) { stats[a].wins++; stats[h].losses++; stats[a].points += 3; }
+    else              { stats[h].draws++; stats[a].draws++; stats[h].points++; stats[a].points++; }
+    stats[h].fairPlay += (parseInt(m.homeYellow)||0)*-1 + (parseInt(m.homeRed)||0)*-3;
+    stats[a].fairPlay += (parseInt(m.awayYellow)||0)*-1 + (parseInt(m.awayRed)||0)*-3;
+  });
+  for (let t in stats) stats[t].gd = stats[t].gf - stats[t].ga;
+
+  function getH2H(tied) {
+    const h2h = {};
+    tied.forEach(t => { h2h[t] = { points:0, gd:0, gf:0 }; });
+    matches.forEach(m => {
+      if (m.status !== 'Played' || !tied.includes(m.home) || !tied.includes(m.away)) return;
+      const hg = parseInt(m.homeScore)||0, ag = parseInt(m.awayScore)||0;
+      h2h[m.home].gf += hg; h2h[m.home].gd += hg-ag;
+      h2h[m.away].gf += ag; h2h[m.away].gd += ag-hg;
+      if (hg > ag) h2h[m.home].points += 3;
+      else if (ag > hg) h2h[m.away].points += 3;
+      else { h2h[m.home].points++; h2h[m.away].points++; }
+    });
+    return h2h;
+  }
+
+  let standings = teams.map(t => ({ team:t, ...stats[t] }));
+  standings.sort((a, b) => {
+    if (a.points !== b.points) return b.points - a.points;
+    if (a.gd !== b.gd) return b.gd - a.gd;
+    if (a.gf !== b.gf) return b.gf - a.gf;
+    const tied = standings.filter(t => t.points===a.points && t.gd===a.gd && t.gf===a.gf).map(t=>t.team);
+    if (tied.length === 2) {
+      const h2h = getH2H(tied);
+      if (h2h[a.team].points !== h2h[b.team].points) return h2h[b.team].points - h2h[a.team].points;
+      if (h2h[a.team].gd !== h2h[b.team].gd) return h2h[b.team].gd - h2h[a.team].gd;
+      if (h2h[a.team].gf !== h2h[b.team].gf) return h2h[b.team].gf - h2h[a.team].gf;
+    }
+    if (a.fairPlay !== b.fairPlay) return b.fairPlay - a.fairPlay;
+    return 0;
+  });
+  return standings;
+}
+
+/* ── Resolve best 3rd-place team from eligible groups ── */
+function resolveBestThird(eligibleGroups, thirdPlaceTeams) {
+  const eligible = eligibleGroups.split('/');
+  let best = null;
+  for (const grp of eligible) {
+    const t = thirdPlaceTeams[grp];
+    if (!t) continue;
+    if (!best) { best = t; continue; }
+    if (t.points > best.points) { best = t; continue; }
+    if (t.points === best.points) {
+      if (t.gd > best.gd) { best = t; continue; }
+      if (t.gd === best.gd && t.gf > best.gf) { best = t; continue; }
+    }
+  }
+  return best ? best.team : null;
+}
+
+/* ── Check if all matches in a group are played ── */
+function isGroupComplete(groupId, allMatches) {
+  const gm = allMatches.filter(m => m.group === groupId);
+  return gm.length > 0 && gm.every(m => m.status === 'Played');
+}
+
+/* ── Resolve a slot to a team name ── */
+function resolveSlot(slot, standings, thirdPlaceTeams, allMatches) {
+  if (slot.rank === '3') {
+    return resolveAllGroupsComplete(slot.grp, allMatches)
+      ? resolveBestThird(slot.grp, thirdPlaceTeams)
+      : null;
+  }
+  const grp = slot.grp;
+  if (!isGroupComplete(grp, allMatches)) return null;
+  const st = standings[grp];
+  if (!st) return null;
+  const idx = slot.rank === '1' ? 0 : 1;
+  return st[idx] ? st[idx].team : null;
+}
+
+function resolveAllGroupsComplete(eligibleStr, allMatches) {
+  return eligibleStr.split('/').every(g => isGroupComplete(g, allMatches));
+}
+
+/* ── Render ── */
+function renderSeeding(allMatches) {
+  // Build standings per group
+  const standings = {};
+  const thirdPlaceTeams = {};
+  for (const grp of ['A','B','C','D','E','F','G','H','I','J','K','L']) {
+    const gm = allMatches.filter(m => m.group === grp);
+    standings[grp] = computeGroupStandings(grp, gm);
+    if (standings[grp][2]) {
+      thirdPlaceTeams[grp] = standings[grp][2];
+    }
+  }
+
+  let confirmed = 0, pending = 0;
+  let currentDate = null;
+  let html = '';
+
+  R32_FIXTURES.forEach(fix => {
+    const homeTeam = resolveSlot(fix.home, standings, thirdPlaceTeams, allMatches);
+    const awayTeam = resolveSlot(fix.away, standings, thirdPlaceTeams, allMatches);
+
+    const bothKnown  = homeTeam && awayTeam;
+    const oneKnown   = (homeTeam || awayTeam) && !bothKnown;
+    const cardStatus = bothKnown ? 'confirmed' : oneKnown ? 'partial' : 'pending';
+
+    if (bothKnown) confirmed++; else pending++;
+
+    // Date label
+    if (fix.date !== currentDate) {
+      currentDate = fix.date;
+      html += `<div class="date-label">${formatDateLabel(fix.date)}</div>`;
+    }
+
+    const homeDisplay = homeTeam || 'TBD 🏳️';
+    const awayDisplay = awayTeam || 'TBD 🏳️';
+    const homeTBD = !homeTeam;
+    const awayTBD = !awayTeam;
+
+    html += `
+      <div class="seeding-card ${cardStatus}">
+        <div class="seeding-card-meta">
+          <span class="seeding-meta-left">M${fix.num} · ${formatTime12(fix.time)}</span>
+          <span class="seeding-meta-right">📍 ${escHtml(fix.city)}</span>
+        </div>
+        <div class="seeding-team-row">
+          <span class="seeding-seed-label">${escHtml(fix.home.label)}</span>
+          <div class="seeding-vdivider"></div>
+          <span class="seeding-team-name${homeTBD ? ' tbd' : ''}">${escHtml(homeDisplay)}</span>
+        </div>
+        <div class="seeding-team-row">
+          <span class="seeding-seed-label">${escHtml(fix.away.label)}</span>
+          <div class="seeding-vdivider"></div>
+          <span class="seeding-team-name${awayTBD ? ' tbd' : ''}">${escHtml(awayDisplay)}</span>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('seedingContent').innerHTML = html;
+  document.getElementById('statConfirmed').textContent = confirmed;
+  document.getElementById('statPending').textContent   = pending;
+}
+
+async function loadSeeding(forceRefresh = false) {
+  try {
+    const allMatches = await loadAllMatches(forceRefresh);
+    window._allMatches = allMatches;
+    renderSeeding(allMatches);
+  } catch(err) {
+    console.error(err);
+    document.getElementById('seedingContent').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load seeding data</div></div>`;
+    showToast('Failed to load', 'error');
+  }
+}
+
+async function syncSeeding() {
+  showToast('Refreshing…');
+  await loadSeeding(true);
+  showToast('✅ Updated');
+}
+
+window.onload = async function() {
+  await initPageAuth({
+    activePage: '',
+    onReady: async () => {
+      await loadSeeding();
+      showMainApp();
+    }
+  });
+};
+</script>
+</body>
+</html>
