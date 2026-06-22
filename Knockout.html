@@ -396,13 +396,17 @@ function renderBracket(matches) {
   html += roundColumn('🏆 Final',      finalMatches, 1);
   html += `</div>`; // .ko-bracket
 
-  // ── Bronze — separate small row below the main bracket ──
+// ── Bronze — below Final in the same column ──
   const bronzeM = bronzeMatches[0] || null;
   if (bronzeM) {
-    html += `<div style="padding:4px 16px 16px;">
-      <div class="ko-finals-title" style="padding-left:6px;">🥉 Bronze Medal</div>
-      <div style="padding:3px 6px;max-width:200px;">${buildKOCard(bronzeM)}</div>
+    html += `<div style="display:flex;flex-direction:row;padding:8px 10px 16px;">`;
+    // spacer to align under Final column
+    html += `<div style="flex:1;"></div>`;
+    html += `<div style="width:168px;flex-shrink:0;">
+      <div class="ko-finals-title">🥉 Bronze Medal</div>
+      <div style="padding:3px 6px;">${buildKOCard(bronzeM)}</div>
     </div>`;
+    html += `</div>`;
   }
 
   html += `</div>`; // outer inline-flex
