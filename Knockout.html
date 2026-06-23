@@ -67,7 +67,7 @@ window._onScoreSaved = async function() { await loadKnockout(); };
 /* ── Build a single match card ── */
 function buildKOCard(m) {
   if (!m) {
-    return `<div class="ko-card" style="opacity:0;pointer-events:none;">
+    return `<div class="ko-card" style="opacity:0.3;pointer-events:none;">
       <div class="ko-card-meta">—</div>
       <div class="ko-team"><span class="ko-team-name tbd">TBD</span></div>
       <div class="ko-team"><span class="ko-team-name tbd">TBD</span></div>
@@ -111,32 +111,19 @@ function buildKOCard(m) {
     </div>`;
 }
 
-/* ── Build a connector column (pairCount pairs) ── */
-function buildConnector(pairCount) {
-  let pairs = '';
-  for (let i = 0; i < pairCount; i++) {
-    pairs += `
-      <div class="ko-conn-pair">
-        <div class="ko-conn-left"></div>
-        <div class="ko-conn-stub"></div>
-      </div>`;
-  }
-  return `<div class="ko-connector-wrapper">${pairs}</div>`;
+/* ── Build a column of matches with given row spans ── */
+function buildColumn(matches, rowSpans) {
+  // rowSpans is an array of integers, one per match, indicating how many grid rows it spans
+  let html = `<div class="ko-column">`;
+  matches.forEach((m, idx) => {
+    const span = rowSpans[idx] || 1;
+    html += `<div class="ko-slot" style="grid-row: span ${span};">${buildKOCard(m)}</div>`;
+  });
+  html += `</div>`;
+  return html;
 }
 
-/* ── Build a round column for a given half ── */
-function buildRoundColumn(title, matchList, slotsCount) {
-  const padded = [...matchList];
-  while (padded.length < slotsCount) padded.push(null);
-  const slots = padded.map(m => `<div class="ko-slot">${buildKOCard(m)}</div>`).join('');
-  return `
-    <div class="ko-round-col">
-      <div class="ko-round-title">${title}</div>
-      <div class="ko-round-body">${slots}</div>
-    </div>`;
-}
-
-/* ── Build the two‑sided bracket ── */
+/* ── Build the bracket ── */
 function renderBracket(matches, allMatches) {
   const wrap = document.getElementById('koWrap');
 
@@ -160,75 +147,76 @@ function renderBracket(matches, allMatches) {
     };
   });
 
-  // Group by round
-  const byRound = {};
-  ['Round of 32','Round of 16','Quarter-Final','Semi-Final','Bronze Medal','Final']
-    .forEach(r => byRound[r] = []);
-  matches.forEach(m => { if (byRound[m.group]) byRound[m.group].push(m); });
+  // Create maps for quick lookup
+  const matchMap = {};
+  matches.forEach(m => { matchMap[m.num] = m; });
 
-  // Sort each round
-  ['Round of 32','Round of 16','Quarter-Final','Semi-Final'].forEach(r =>
-    byRound[r].sort((a,b) => a.num - b.num));
+  // Define the bracket structure for left and right sides
+  // Left side (top half): R32 (73-80) -> R16 (89-92) -> QF (97-98) -> SF (101)
+  // Right side (bottom half): SF (102) -> QF (99-100) -> R16 (93-96) -> R32 (81-88)
+  // Centre: Final (104), Bronze (103)
 
-  const r32 = byRound['Round of 32'];
-  const r16 = byRound['Round of 16'];
-  const qf  = byRound['Quarter-Final'];
-  const sf  = byRound['Semi-Final'];
-  const bronze = byRound['Bronze Medal'];
-  const finalM = byRound['Final'];
+  const leftR32 = [73,74,75,76,77,78,79,80].map(n => matchMap[n]);
+  const leftR16 = [89,90,91,92].map(n => matchMap[n]);
+  const leftQF  = [97,98].map(n => matchMap[n]);
+  const leftSF  = [101].map(n => matchMap[n]);
 
-  // Split into top/bottom halves
-  const half = (arr, start) => arr.slice(start, start + arr.length/2);
+  const rightSF  = [102].map(n => matchMap[n]);
+  const rightQF  = [99,100].map(n => matchMap[n]);
+  const rightR16 = [93,94,95,96].map(n => matchMap[n]);
+  const rightR32 = [81,82,83,84,85,86,87,88].map(n => matchMap[n]);
 
-  const topR32 = half(r32, 0);
-  const botR32 = half(r32, 8);
-  const topR16 = half(r16, 0);
-  const botR16 = half(r16, 4);
-  const topQF  = half(qf, 0);
-  const botQF  = half(qf, 2);
-  const topSF  = half(sf, 0);
-  const botSF  = half(sf, 1);
+  const finalM = matchMap[104];
+  const bronzeM = matchMap[103];
 
-  // Build HTML
-  let html = `<div class="ko-bracket">`;
+  // Row spans for each round (left side, from outer to inner)
+  const leftColumns = [
+    { matches: leftR32, spans: [1,1,1,1,1,1,1,1] },
+    { matches: leftR16, spans: [2,2,2,2] },
+    { matches: leftQF,  spans: [4,4] },
+    { matches: leftSF,  spans: [8] },
+  ];
 
-  // ── Top half row ──
-  html += `<div class="ko-half">`;
-  html += buildRoundColumn('Round of 32', topR32, 8);
-  html += buildConnector(4);
-  html += buildRoundColumn('Round of 16', topR16, 4);
-  html += buildConnector(2);
-  html += buildRoundColumn('Quarter-Final', topQF, 2);
-  html += buildConnector(1);
-  html += buildRoundColumn('Semi-Final', topSF, 1);
+  // Right side (inner to outer)
+  const rightColumns = [
+    { matches: rightSF,  spans: [8] },
+    { matches: rightQF,  spans: [4,4] },
+    { matches: rightR16, spans: [2,2,2,2] },
+    { matches: rightR32, spans: [1,1,1,1,1,1,1,1] },
+  ];
+
+  let html = `<div class="ko-bracket-row">`;
+
+  // ── Left side ──
+  html += `<div class="ko-side">`;
+  leftColumns.forEach(col => {
+    html += buildColumn(col.matches, col.spans);
+    // Add a small connector between columns (optional)
+    html += `<div class="ko-connector"><div class="line"></div></div>`;
+  });
   html += `</div>`;
 
-  // ── Centre row (Final & Bronze) ──
-  html += `<div class="ko-centre-row">`;
-  html += `<div class="ko-centre-spacer"></div>`;
-  html += `<div class="ko-centre">`;
+  // ── Centre (Final & Bronze) ──
+  html += `<div class="ko-centre-col">`;
   html += `<div class="ko-round-title">🏆 Final</div>`;
-  html += `<div class="ko-slot">${buildKOCard(finalM[0] || null)}</div>`;
-  if (bronze && bronze.length) {
+  html += `<div class="ko-slot">${buildKOCard(finalM)}</div>`;
+  if (bronzeM) {
     html += `<div style="margin-top:12px;"><div class="ko-round-title" style="font-size:8px;">🥉 Bronze Medal</div>`;
-    html += `<div class="ko-slot">${buildKOCard(bronze[0] || null)}</div></div>`;
+    html += `<div class="ko-slot">${buildKOCard(bronzeM)}</div></div>`;
   }
   html += `</div>`;
-  html += `<div class="ko-centre-spacer"></div>`;
+
+  // ── Right side ──
+  html += `<div class="ko-side">`;
+  rightColumns.forEach(col => {
+    // Add a connector before the column (so lines go from centre outward)
+    html += `<div class="ko-connector"><div class="line"></div></div>`;
+    html += buildColumn(col.matches, col.spans);
+  });
   html += `</div>`;
 
-  // ── Bottom half row (mirrored) ──
-  html += `<div class="ko-half">`;
-  html += buildRoundColumn('Semi-Final', botSF, 1);
-  html += buildConnector(1);
-  html += buildRoundColumn('Quarter-Final', botQF, 2);
-  html += buildConnector(2);
-  html += buildRoundColumn('Round of 16', botR16, 4);
-  html += buildConnector(4);
-  html += buildRoundColumn('Round of 32', botR32, 8);
-  html += `</div>`;
+  html += `</div>`; // .ko-bracket-row
 
-  html += `</div>`;
   wrap.innerHTML = html;
 }
 
