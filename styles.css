@@ -806,29 +806,6 @@ body {
   align-items: stretch;
 }
 
-.ko-column {
-  display: grid;
-  grid-template-rows: repeat(8, 1fr);
-  gap: 4px;
-  min-width: 160px;
-  flex-shrink: 0;
-}
-
-.ko-column .ko-slot {
-  grid-row: span 1; /* will be overridden inline */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 4px;
-}
-
-.ko-column .ko-card {
-  width: 100%;
-  flex-shrink: 0;
-  height: auto; /* ensures card uses its natural height */
-}
-
 .ko-column-wrapper {
   display: flex;
   flex-direction: column;
@@ -846,7 +823,31 @@ body {
   padding: 0 6px 10px;
   white-space: nowrap;
 }
-/* Centre column (Final & Bronze) */
+
+.ko-column {
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  gap: 4px;
+  min-width: 160px;
+  flex-shrink: 0;
+}
+
+.ko-column .ko-slot {
+  grid-row: span 1; /* overridden inline */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  padding: 4px 4px;
+}
+
+.ko-column .ko-card {
+  width: 100%;
+  flex-shrink: 0;
+  height: auto; /* prevents stretching */
+}
+
+/* Centre column */
 .ko-centre-col {
   display: flex;
   flex-direction: column;
@@ -867,7 +868,7 @@ body {
   margin-bottom: 4px;
 }
 
-/* Connector lines between columns */
+/* Connector lines – simple vertical separators */
 .ko-connector {
   display: flex;
   flex-direction: column;
