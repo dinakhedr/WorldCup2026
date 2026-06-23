@@ -112,15 +112,23 @@ function buildKOCard(m) {
 }
 
 /* ── Build a column of matches with given row spans ── */
-function buildColumn(matches, rowSpans) {
+function buildColumn(title, matches, rowSpans) {
   // rowSpans is an array of integers, one per match, indicating how many grid rows it spans
-  let html = `<div class="ko-column">`;
+  let html = `<div class="ko-column-wrapper">
+    <div class="ko-column-title">${title}</div>
+    <div class="ko-column">`;
   matches.forEach((m, idx) => {
     const span = rowSpans[idx] || 1;
     html += `<div class="ko-slot" style="grid-row: span ${span};">${buildKOCard(m)}</div>`;
   });
-  html += `</div>`;
+  html += `</div></div>`;
   return html;
+}
+
+/* ── Build a connector between two columns ── */
+function buildConnector() {
+  // For a single row, we just need a vertical line spacer
+  return `<div class="ko-connector"><div class="line"></div></div>`;
 }
 
 /* ── Build the bracket ── */
@@ -171,28 +179,27 @@ function renderBracket(matches, allMatches) {
 
   // Row spans for each round (left side, from outer to inner)
   const leftColumns = [
-    { matches: leftR32, spans: [1,1,1,1,1,1,1,1] },
-    { matches: leftR16, spans: [2,2,2,2] },
-    { matches: leftQF,  spans: [4,4] },
-    { matches: leftSF,  spans: [8] },
+    { title: 'Round of 32', matches: leftR32, spans: [1,1,1,1,1,1,1,1] },
+    { title: 'Round of 16', matches: leftR16, spans: [2,2,2,2] },
+    { title: 'Quarter-Final', matches: leftQF, spans: [4,4] },
+    { title: 'Semi-Final', matches: leftSF, spans: [8] },
   ];
 
   // Right side (inner to outer)
   const rightColumns = [
-    { matches: rightSF,  spans: [8] },
-    { matches: rightQF,  spans: [4,4] },
-    { matches: rightR16, spans: [2,2,2,2] },
-    { matches: rightR32, spans: [1,1,1,1,1,1,1,1] },
+    { title: 'Semi-Final', matches: rightSF, spans: [8] },
+    { title: 'Quarter-Final', matches: rightQF, spans: [4,4] },
+    { title: 'Round of 16', matches: rightR16, spans: [2,2,2,2] },
+    { title: 'Round of 32', matches: rightR32, spans: [1,1,1,1,1,1,1,1] },
   ];
 
   let html = `<div class="ko-bracket-row">`;
 
   // ── Left side ──
   html += `<div class="ko-side">`;
-  leftColumns.forEach(col => {
-    html += buildColumn(col.matches, col.spans);
-    // Add a small connector between columns (optional)
-    html += `<div class="ko-connector"><div class="line"></div></div>`;
+  leftColumns.forEach((col, idx) => {
+    html += buildColumn(col.title, col.matches, col.spans);
+    if (idx < leftColumns.length - 1) html += buildConnector();
   });
   html += `</div>`;
 
@@ -208,10 +215,10 @@ function renderBracket(matches, allMatches) {
 
   // ── Right side ──
   html += `<div class="ko-side">`;
-  rightColumns.forEach(col => {
-    // Add a connector before the column (so lines go from centre outward)
-    html += `<div class="ko-connector"><div class="line"></div></div>`;
-    html += buildColumn(col.matches, col.spans);
+  rightColumns.forEach((col, idx) => {
+    // connector before each column (except first, which is already after centre)
+    if (idx > 0) html += buildConnector();
+    html += buildColumn(col.title, col.matches, col.spans);
   });
   html += `</div>`;
 
