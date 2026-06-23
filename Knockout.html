@@ -19,222 +19,6 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="utils.js"></script>
-  <style>
-    /* ── Bracket layout ── */
-    .ko-wrap {
-      overflow-x: auto;
-      overflow-y: visible;
-      -webkit-overflow-scrolling: touch;
-      padding: 12px 0 8px;
-      /* flex: 1 so it fills the mainApp column and the spacer still works */
-      flex: 1;
-    }
-
-    /* The outer bracket flex row — grows as tall as needed */
-    .ko-bracket {
-      display: flex;
-      flex-direction: row;
-      align-items: stretch;
-      width: max-content;
-      min-width: 100%;
-      padding: 0 10px 16px;
-      gap: 0;
-    }
-
-    /* One round column */
-    .ko-round {
-      display: flex;
-      flex-direction: column;
-      width: 168px;
-      flex-shrink: 0;
-    }
-    .ko-round-title {
-      font-size: 9px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.45);
-      text-align: center;
-      padding: 0 6px 10px;
-      white-space: nowrap;
-    }
-    .ko-round-body {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }
-
-    /* Each "slot" stretches evenly in the column */
-    .ko-slot {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      justify-content: center;
-      padding: 5px 6px;
-      position: relative;
-      min-height: 90px;
-    }
-
-    /* Match card inside a slot */
-    .ko-card {
-      background: var(--surface);
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.12s, box-shadow 0.12s;
-      position: relative;
-    }
-    .ko-card::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0; width: 3px;
-      background: var(--border);
-      border-radius: 3px 0 0 3px;
-    }
-    .ko-card.played::before { background: var(--green-mid); }
-    .ko-card:active { transform: scale(0.97); }
-
-    .ko-card-meta {
-      padding: 5px 9px 3px 11px;
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--text-3);
-      letter-spacing: 0.01em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .ko-team {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 4px 9px 4px 11px;
-      gap: 4px;
-      border-top: 1px solid var(--border);
-    }
-    .ko-team:first-of-type { border-top: none; }
-
-    .ko-team-name {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text);
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .ko-team-name.tbd {
-      color: var(--text-3);
-      font-weight: 600;
-      font-style: normal; /* never italic */
-    }
-    .ko-team-name.winner { color: var(--green-mid); }
-
-    .ko-team-score {
-      font-size: 13px;
-      font-weight: 900;
-      color: var(--text-3);
-      min-width: 14px;
-      text-align: right;
-      flex-shrink: 0;
-    }
-    .ko-team-score.winner { color: var(--green-mid); }
-
-    .ko-card-venue {
-      font-size: 8px;
-      color: var(--text-3);
-      padding: 2px 9px 5px 11px;
-      border-top: 1px solid var(--border);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .ko-card.played .ko-card-venue { color: #059669; }
-
-    /* Penalty line */
-    .ko-pen {
-      font-size: 8px;
-      font-weight: 700;
-      color: #b45309;
-      padding: 1px 9px 4px 11px;
-      border-top: none;
-    }
-
-    /* ── Connector column between rounds ── */
-    .ko-connector {
-      width: 28px;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      /* title spacer — matches ko-round-title height */
-      padding-top: 27px;
-    }
-
-    /* Each connector pair: top half + bottom half + horizontal stub */
-    .ko-conn-pair {
-      flex: 2; /* matches 2 left slots → 1 right slot */
-      display: flex;
-      flex-direction: row;
-    }
-    .ko-conn-lines {
-      width: 14px;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }
-    .ko-conn-top {
-      flex: 1;
-      border-right: 2px solid rgba(255,255,255,0.18);
-      border-bottom: 2px solid rgba(255,255,255,0.18);
-      border-bottom-right-radius: 4px;
-    }
-    .ko-conn-bot {
-      flex: 1;
-      border-right: 2px solid rgba(255,255,255,0.18);
-      border-top: 2px solid rgba(255,255,255,0.18);
-      border-top-right-radius: 4px;
-    }
-    .ko-conn-stub {
-      width: 14px;
-      border-top: 2px solid rgba(255,255,255,0.18);
-      align-self: center;
-      flex-shrink: 0;
-    }
-
-    /* ── Bronze & Final section (vertical below bracket) ── */
-    .ko-finals-row {
-      display: flex;
-      flex-direction: row;
-      gap: 10px;
-      padding: 0 10px 16px;
-      width: max-content;
-      min-width: 100%;
-    }
-    .ko-finals-block {
-      width: 168px;
-      flex-shrink: 0;
-    }
-    .ko-finals-title {
-      font-size: 9px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.45);
-      padding: 0 6px 10px;
-      white-space: nowrap;
-    }
-
-    /* Divider between main bracket and finals */
-    .ko-divider {
-      margin: 4px 10px 12px;
-      height: 1px;
-      background: rgba(255,255,255,0.08);
-    }
-  </style>
 </head>
 <body>
 
@@ -280,7 +64,7 @@
 <script>
 window._onScoreSaved = async function() { await loadKnockout(); };
 
-/* ── Build a single match card ── */
+/* ── Build a single match card (identical to before) ── */
 function buildKOCard(m) {
   if (!m) {
     return `<div class="ko-card" style="opacity:0;pointer-events:none;">
@@ -327,23 +111,32 @@ function buildKOCard(m) {
     </div>`;
 }
 
-/* ── Build a connector column (pairCount pairs, each spanning 2 left slots → 1 right slot) ── */
+/* ── Build a connector column (pairCount pairs) ── */
 function buildConnector(pairCount) {
   let pairs = '';
   for (let i = 0; i < pairCount; i++) {
     pairs += `
       <div class="ko-conn-pair">
-        <div class="ko-conn-lines">
-          <div class="ko-conn-top"></div>
-          <div class="ko-conn-bot"></div>
-        </div>
+        <div class="ko-conn-left"></div>
         <div class="ko-conn-stub"></div>
       </div>`;
   }
-  return `<div class="ko-connector">${pairs}</div>`;
+  return `<div class="ko-connector-wrapper">${pairs}</div>`;
 }
 
-/* ── Main render function ── */
+/* ── Build a round column for a given half ── */
+function buildRoundColumn(title, matchList, slotsCount) {
+  const padded = [...matchList];
+  while (padded.length < slotsCount) padded.push(null);
+  const slots = padded.map(m => `<div class="ko-slot">${buildKOCard(m)}</div>`).join('');
+  return `
+    <div class="ko-round-col">
+      <div class="ko-round-title">${title}</div>
+      <div class="ko-round-body">${slots}</div>
+    </div>`;
+}
+
+/* ── Build the two‑sided bracket ── */
 function renderBracket(matches, allMatches) {
   const wrap = document.getElementById('koWrap');
 
@@ -352,7 +145,7 @@ function renderBracket(matches, allMatches) {
     return;
   }
 
-  // Resolve R32 TBD slots from group standings using shared utils
+  // Resolve R32 TBDs using the same logic as before
   const { standings, thirdPlaceTeams } = buildAllStandings(allMatches);
   matches = matches.map(m => {
     if (m.group !== 'Round of 32') return m;
@@ -372,61 +165,66 @@ function renderBracket(matches, allMatches) {
   ['Round of 32','Round of 16','Quarter-Final','Semi-Final','Bronze Medal','Final']
     .forEach(r => byRound[r] = []);
   matches.forEach(m => { if (byRound[m.group]) byRound[m.group].push(m); });
+
+  // Sort each round by match number
   ['Round of 32','Round of 16','Quarter-Final','Semi-Final'].forEach(r =>
     byRound[r].sort((a,b) => a.num - b.num));
 
-  const r32 = byRound['Round of 32'];   // 16 matches
-  const r16 = byRound['Round of 16'];   //  8 matches
-  const qf  = byRound['Quarter-Final']; //  4 matches
-  const sf  = byRound['Semi-Final'];    //  2 matches
-  const finalMatches  = byRound['Final'];
-  const bronzeMatches = byRound['Bronze Medal'];
+  const r32 = byRound['Round of 32'];   // 16
+  const r16 = byRound['Round of 16'];   // 8
+  const qf  = byRound['Quarter-Final']; // 4
+  const sf  = byRound['Semi-Final'];    // 2
+  const bronze = byRound['Bronze Medal'];
+  const finalM = byRound['Final'];
 
-  function roundColumn(title, matchArr, slotsCount) {
-    const padded = [...matchArr];
-    while (padded.length < slotsCount) padded.push(null);
-    const slots = padded.map(m => `<div class="ko-slot">${buildKOCard(m)}</div>`).join('');
-    return `
-      <div class="ko-round">
-        <div class="ko-round-title">${title}</div>
-        <div class="ko-round-body">${slots}</div>
-      </div>`;
-  }
+  // Split each round into top and bottom halves
+  const half = (arr, start) => arr.slice(start, start + arr.length/2);
 
-  const baseSlots = r32.length || 16;
+  const topR32 = half(r32, 0);
+  const botR32 = half(r32, 8);
+  const topR16 = half(r16, 0);
+  const botR16 = half(r16, 4);
+  const topQF  = half(qf, 0);
+  const botQF  = half(qf, 2);
+  const topSF  = half(sf, 0);
+  const botSF  = half(sf, 1);
 
-  // ── Everything in ONE scrollable container ──
-  let html = `<div style="display:inline-flex;flex-direction:column;min-width:100%;padding-bottom:16px;">`;
+  // Build the bracket HTML
+  let html = `<div class="ko-bracket">`;
 
-  // ── Single horizontal bracket: R32 → R16 → QF → SF → Final ──
-  html += `<div class="ko-bracket">`;
-  html += roundColumn('Round of 32',   r32, baseSlots);
-  html += buildConnector(baseSlots / 2);
-  html += roundColumn('Round of 16',   r16, baseSlots / 2);
-  html += buildConnector(baseSlots / 4);
-  html += roundColumn('Quarter-Final', qf,  baseSlots / 4);
-  html += buildConnector(baseSlots / 8);
-  html += roundColumn('Semi-Final',    sf,  baseSlots / 8);
+  // ── Top half ──
+  html += `<div class="ko-half">`;
+  html += buildRoundColumn('Round of 32', topR32, 8);
+  html += buildConnector(4);
+  html += buildRoundColumn('Round of 16', topR16, 4);
+  html += buildConnector(2);
+  html += buildRoundColumn('Quarter-Final', topQF, 2);
   html += buildConnector(1);
+  html += buildRoundColumn('Semi-Final', topSF, 1);
+  html += `</div>`;
 
-  // ── Final + Bronze stacked in one column ──
-  const bronzeM = bronzeMatches[0] || null;
-  const finalM  = finalMatches[0]  || null;
-  html += `
-    <div class="ko-round">
-      <div class="ko-round-title">🏆 Final</div>
-      <div class="ko-round-body">
-        <div class="ko-slot">${buildKOCard(finalM)}</div>
-        ${bronzeM ? `
-        <div class="ko-slot" style="border-top:1px solid rgba(255,255,255,0.08);margin-top:8px;padding-top:4px;">
-          <div class="ko-round-title" style="text-align:left;padding:0 6px 8px;">🥉 BRONZE MEDAL</div>
-          ${buildKOCard(bronzeM)}
-        </div>` : ''}
-      </div>
-    </div>`;
+  // ── Centre: Final and Bronze ──
+  html += `<div class="ko-centre">`;
+  html += `<div class="ko-round-title">🏆 Final</div>`;
+  html += `<div class="ko-slot">${buildKOCard(finalM[0] || null)}</div>`;
+  if (bronze && bronze.length) {
+    html += `<div style="margin-top:12px;"><div class="ko-round-title" style="font-size:8px;">🥉 Bronze Medal</div>`;
+    html += `<div class="ko-slot">${buildKOCard(bronze[0] || null)}</div></div>`;
+  }
+  html += `</div>`;
+
+  // ── Bottom half ──
+  html += `<div class="ko-half">`;
+  html += buildRoundColumn('Semi-Final', botSF, 1);
+  html += buildConnector(1);
+  html += buildRoundColumn('Quarter-Final', botQF, 2);
+  html += buildConnector(2);
+  html += buildRoundColumn('Round of 16', botR16, 4);
+  html += buildConnector(4);
+  html += buildRoundColumn('Round of 32', botR32, 8);
+  html += `</div>`;
 
   html += `</div>`; // .ko-bracket
-  html += `</div>`; // outer inline-flex
 
   wrap.innerHTML = html;
 }
@@ -456,7 +254,7 @@ async function loadKnockout() {
 
 async function syncKnockout() {
   showToast('Refreshing…');
-  await loadAllMatches(true);   // force cache bypass
+  await loadAllMatches(true);
   await loadKnockout();
   showToast('✅ Updated');
 }
