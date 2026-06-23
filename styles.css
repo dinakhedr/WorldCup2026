@@ -965,8 +965,90 @@ body {
   text-align: center;
 }
 
-/* ── Existing ko-card styles are already in styles.css ── */
-/* We keep them as they are, no changes needed */
+/* ── Knockout Match Card (reused from previous design) ── */
+.ko-card {
+  background: var(--surface);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  position: relative;
+}
+.ko-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--border);
+  border-radius: 3px 0 0 3px;
+}
+.ko-card.played::before { background: var(--green-mid); }
+.ko-card:active { transform: scale(0.97); }
+
+.ko-card-meta {
+  padding: 5px 9px 3px 11px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ko-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 9px 4px 11px;
+  gap: 4px;
+  border-top: 1px solid var(--border);
+}
+.ko-team:first-of-type { border-top: none; }
+
+.ko-team-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ko-team-name.tbd {
+  color: var(--text-3);
+  font-weight: 600;
+}
+.ko-team-name.winner { color: var(--green-mid); }
+
+.ko-team-score {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-3);
+  min-width: 14px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.ko-team-score.winner { color: var(--green-mid); }
+
+.ko-card-venue {
+  font-size: 8px;
+  color: var(--text-3);
+  padding: 2px 9px 5px 11px;
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ko-card.played .ko-card-venue { color: #059669; }
+
+.ko-pen {
+  font-size: 8px;
+  font-weight: 700;
+  color: #b45309;
+  padding: 1px 9px 4px 11px;
+  border-top: none;
+}
 /* ════════════════════════════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════════════════════════════ */
