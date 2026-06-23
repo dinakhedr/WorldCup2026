@@ -831,7 +831,142 @@ body {
   font-weight: 400;
   font-style: italic;
 }
+/* ============================================================
+   TWO‑SIDED KNOCKOUT BRACKET
+   ============================================================ */
+.ko-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 0 8px;
+  flex: 1;
+  background: var(--surface-2);
+}
 
+.ko-bracket {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+  min-width: 100%;
+  padding: 0 10px 16px;
+  gap: 12px;
+}
+
+/* Each half row */
+.ko-half {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Each round column inside a half */
+.ko-round-col {
+  display: flex;
+  flex-direction: column;
+  width: 168px;
+  flex-shrink: 0;
+}
+
+.ko-round-title {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+  padding: 0 6px 10px;
+  white-space: nowrap;
+}
+
+.ko-round-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* Match slot (vertical spacing) */
+.ko-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  padding: 4px 4px;
+  position: relative;
+  min-height: 85px;
+}
+
+/* ── Connector lines between rounds ── */
+.ko-connector-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 28px;
+  flex-shrink: 0;
+  padding-top: 22px;
+}
+
+.ko-conn-pair {
+  flex: 2; /* matches 2 slots → 1 */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ko-conn-left {
+  flex: 1;
+  height: 100%;
+  border-right: 2px solid rgba(255,255,255,0.18);
+  position: relative;
+}
+
+.ko-conn-left::before,
+.ko-conn-left::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  width: 50%;
+  height: 50%;
+  border: 2px solid rgba(255,255,255,0.18);
+  border-left: none;
+}
+
+.ko-conn-left::before {
+  top: 0;
+  border-bottom: none;
+  border-top-right-radius: 4px;
+}
+
+.ko-conn-left::after {
+  bottom: 0;
+  border-top: none;
+  border-bottom-right-radius: 4px;
+}
+
+.ko-conn-stub {
+  width: 14px;
+  border-top: 2px solid rgba(255,255,255,0.18);
+  flex-shrink: 0;
+}
+
+/* ── Centre (Final + Bronze) ── */
+.ko-centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 0 10px;
+  width: 168px;
+  flex-shrink: 0;
+}
+
+.ko-centre .ko-round-title {
+  text-align: center;
+}
+
+/* ── Existing ko-card styles are already in styles.css ── */
+/* We keep them as they are, no changes needed */
 /* ════════════════════════════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════════════════════════════ */
