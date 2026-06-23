@@ -64,7 +64,7 @@
 <script>
 window._onScoreSaved = async function() { await loadKnockout(); };
 
-/* ── Build a single match card (identical to before) ── */
+/* ── Build a single match card ── */
 function buildKOCard(m) {
   if (!m) {
     return `<div class="ko-card" style="opacity:0;pointer-events:none;">
@@ -145,7 +145,7 @@ function renderBracket(matches, allMatches) {
     return;
   }
 
-  // Resolve R32 TBDs using the same logic as before
+  // Resolve R32 TBDs
   const { standings, thirdPlaceTeams } = buildAllStandings(allMatches);
   matches = matches.map(m => {
     if (m.group !== 'Round of 32') return m;
@@ -166,18 +166,18 @@ function renderBracket(matches, allMatches) {
     .forEach(r => byRound[r] = []);
   matches.forEach(m => { if (byRound[m.group]) byRound[m.group].push(m); });
 
-  // Sort each round by match number
+  // Sort each round
   ['Round of 32','Round of 16','Quarter-Final','Semi-Final'].forEach(r =>
     byRound[r].sort((a,b) => a.num - b.num));
 
-  const r32 = byRound['Round of 32'];   // 16
-  const r16 = byRound['Round of 16'];   // 8
-  const qf  = byRound['Quarter-Final']; // 4
-  const sf  = byRound['Semi-Final'];    // 2
+  const r32 = byRound['Round of 32'];
+  const r16 = byRound['Round of 16'];
+  const qf  = byRound['Quarter-Final'];
+  const sf  = byRound['Semi-Final'];
   const bronze = byRound['Bronze Medal'];
   const finalM = byRound['Final'];
 
-  // Split each round into top and bottom halves
+  // Split into top/bottom halves
   const half = (arr, start) => arr.slice(start, start + arr.length/2);
 
   const topR32 = half(r32, 0);
@@ -189,10 +189,10 @@ function renderBracket(matches, allMatches) {
   const topSF  = half(sf, 0);
   const botSF  = half(sf, 1);
 
-  // Build the bracket HTML
+  // Build HTML
   let html = `<div class="ko-bracket">`;
 
-  // ── Top half ──
+  // ── Top half row ──
   html += `<div class="ko-half">`;
   html += buildRoundColumn('Round of 32', topR32, 8);
   html += buildConnector(4);
@@ -203,7 +203,9 @@ function renderBracket(matches, allMatches) {
   html += buildRoundColumn('Semi-Final', topSF, 1);
   html += `</div>`;
 
-  // ── Centre: Final and Bronze ──
+  // ── Centre row (Final & Bronze) ──
+  html += `<div class="ko-centre-row">`;
+  html += `<div class="ko-centre-spacer"></div>`;
   html += `<div class="ko-centre">`;
   html += `<div class="ko-round-title">🏆 Final</div>`;
   html += `<div class="ko-slot">${buildKOCard(finalM[0] || null)}</div>`;
@@ -212,8 +214,10 @@ function renderBracket(matches, allMatches) {
     html += `<div class="ko-slot">${buildKOCard(bronze[0] || null)}</div></div>`;
   }
   html += `</div>`;
+  html += `<div class="ko-centre-spacer"></div>`;
+  html += `</div>`;
 
-  // ── Bottom half ──
+  // ── Bottom half row (mirrored) ──
   html += `<div class="ko-half">`;
   html += buildRoundColumn('Semi-Final', botSF, 1);
   html += buildConnector(1);
@@ -224,8 +228,7 @@ function renderBracket(matches, allMatches) {
   html += buildRoundColumn('Round of 32', botR32, 8);
   html += `</div>`;
 
-  html += `</div>`; // .ko-bracket
-
+  html += `</div>`;
   wrap.innerHTML = html;
 }
 
