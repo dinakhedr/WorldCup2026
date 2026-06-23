@@ -965,6 +965,34 @@ body {
   text-align: center;
 }
 
+/* ── Centre row (Final + Bronze) ── */
+.ko-centre-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: stretch;
+  width: 100%;
+  gap: 12px;
+}
+
+.ko-centre-spacer {
+  flex: 1;
+  /* takes up empty space to push centre to the middle */
+}
+
+.ko-centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  width: 168px;
+  flex-shrink: 0;
+}
+
+.ko-centre .ko-round-title {
+  text-align: center;
+}
 /* ── Knockout Match Card (reused from previous design) ── */
 .ko-card {
   background: var(--surface);
