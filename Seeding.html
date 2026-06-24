@@ -96,17 +96,14 @@ function renderSeeding(allMatches) {
   let html = '';
 
   R32_FIXTURES.forEach(fix => {
-    const homeTeam = resolveR32Slot(fix.home, standings, thirdPlaceTeams, allMatches);
-    const awayTeam = resolveR32Slot(fix.away, standings, thirdPlaceTeams, allMatches);
+    const homeTeam = resolveR32SlotDynamic(fix.home, standings, thirdPlaceTeams, allMatches);
+    const awayTeam = resolveR32SlotDynamic(fix.away, standings, thirdPlaceTeams, allMatches);
 
-    const bothKnown     = homeTeam && awayTeam;
-    const oneKnown      = (homeTeam || awayTeam) && !bothKnown;
-    const homeConfirmed = fix.home.rank === '3' ? false : isGroupComplete(fix.home.grp, allMatches);
-    const awayConfirmed = fix.away.rank === '3' ? false : isGroupComplete(fix.away.grp, allMatches);
-    const fullyConfirmed = bothKnown && homeConfirmed && awayConfirmed;
-    const cardStatus = fullyConfirmed ? 'confirmed' : (bothKnown || oneKnown) ? 'partial' : 'pending';
+    const bothKnown  = homeTeam && awayTeam;
+    const oneKnown   = (homeTeam || awayTeam) && !bothKnown;
+    const cardStatus = bothKnown ? 'confirmed' : oneKnown ? 'partial' : 'pending';
 
-    if (fullyConfirmed) confirmed++; else pending++;
+    if (bothKnown) confirmed++; else pending++;
 
     // Date label
     if (fix.date !== currentDate) {
