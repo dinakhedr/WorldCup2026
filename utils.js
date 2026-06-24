@@ -823,42 +823,6 @@ function isGroupComplete(groupId, allMatches) {
   return gm.length > 0 && played >= 6;
 }
 
-/* Returns true if a team is mathematically secured in a given position (0=1st, 1=2nd)
-   regardless of remaining matches in the group */
-function isTeamSecured(team, position, groupId, allMatches) {
-  const gm = allMatches.filter(m => m.group === groupId);
-  const teams = GROUPS_TEAMS[groupId] || [];
-  const stats = {};
-  teams.forEach(t => { stats[t] = { pts: 0, remaining: 0 }; });
-
-  gm.forEach(m => {
-    const h = m.home, a = m.away;
-    if (!stats[h] || !stats[a]) return;
-    if (m.status === 'Played') {
-      const hg = parseInt(m.homeScore)||0, ag = parseInt(m.awayScore)||0;
-      if (hg > ag)      { stats[h].pts += 3; }
-      else if (ag > hg) { stats[a].pts += 3; }
-      else              { stats[h].pts += 1; stats[a].pts += 1; }
-    } else {
-      stats[h].remaining++;
-      stats[a].remaining++;
-    }
-  });
-
-  const teamPts = stats[team]?.pts ?? 0;
-  const others = teams.filter(t => t !== team)
-    .map(t => ({ t, maxPts: (stats[t]?.pts ?? 0) + (stats[t]?.remaining ?? 0) * 3 }))
-    .sort((a, b) => b.maxPts - a.maxPts);
-
-  if (position === 0) {
-    // Secured 1st: nobody else can reach our points
-    return others.every(o => o.maxPts < teamPts);
-  } else {
-    // Secured top 2: at most 1 other team can reach or exceed our points
-    return others.filter(o => o.maxPts >= teamPts).length <= 1;
-  }
-}
-
 function buildAllStandings(allMatches) {
   const standings = {};
   const thirdPlaceTeams = {};
@@ -886,7 +850,19 @@ function resolveBestThird(eligibleStr, thirdPlaceTeams, allMatches) {
   return best ? best.team : null;
 }
 
+/* Used by Knockout.html — only shows team when group is fully complete (all 6 matches played) */
 function resolveR32Slot(slot, standings, thirdPlaceTeams, allMatches) {
+  if (slot.rank === '3') {
+    return resolveBestThird(slot.grp, thirdPlaceTeams, allMatches);
+  }
+  if (!isGroupComplete(slot.grp, allMatches)) return null;
+  const st = standings[slot.grp];
+  if (!st) return null;
+  return st[slot.rank === '1' ? 0 : 1]?.team || null;
+}
+
+/* Used by Seeding.html — shows current standings leader dynamically after each match */
+function resolveR32SlotDynamic(slot, standings, thirdPlaceTeams, allMatches) {
   if (slot.rank === '3') {
     return resolveBestThird(slot.grp, thirdPlaceTeams, allMatches);
   }
@@ -894,7 +870,6 @@ function resolveR32Slot(slot, standings, thirdPlaceTeams, allMatches) {
   if (!st) return null;
   const idx = slot.rank === '1' ? 0 : 1;
   const team = st[idx];
-  // Show the team if they have played at least one match
   if (!team || team.played === 0) return null;
-  return team.team;  // always show current leader/runner‑up
+  return team.team;
 }
