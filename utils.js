@@ -546,6 +546,7 @@ async function saveScoreResult() {
     closeScoreModal();
     showToast('✅ Result saved!');
     _invalidateMatchCache();
+    await writeResolvedKOTeams();
     if (typeof window._onScoreSaved === 'function') await window._onScoreSaved();
   } catch(e) {
     console.error(e);
@@ -555,6 +556,60 @@ async function saveScoreResult() {
   }
 }
 
+/* ── Write resolved KO team names back to the sheet ──────────
+   Called after every score save. Resolves R32 slots from current
+   standings and writes team names (with flags) to cols E & J.
+   Only writes cells that have changed from their current value.  */
+async function writeResolvedKOTeams() {
+  try {
+    const allMatches = await loadAllMatches(true);
+    const { standings, thirdPlaceTeams } = buildAllStandings(allMatches);
+
+    // Build list of sheet updates needed
+    const updates = [];
+
+    for (const [num, seeding] of Object.entries(R32_SEEDING)) {
+      const matchNum = parseInt(num);
+      const m = allMatches.find(x => x.num === matchNum);
+      if (!m) continue;
+
+      const resolvedHome = resolveR32Slot(seeding.home, standings, thirdPlaceTeams, allMatches);
+      const resolvedAway = resolveR32Slot(seeding.away, standings, thirdPlaceTeams, allMatches);
+
+      const sheetRow = m.rowIndex + 1;
+
+      // Only write if resolved and different from current cell value
+      if (resolvedHome && resolvedHome !== m.home) {
+        updates.push({
+          range: `${SHEET_GM}!E${sheetRow}`,
+          values: [[resolvedHome]]
+        });
+      }
+      if (resolvedAway && resolvedAway !== m.away) {
+        updates.push({
+          range: `${SHEET_GM}!J${sheetRow}`,
+          values: [[resolvedAway]]
+        });
+      }
+    }
+
+    if (!updates.length) return; // nothing to write
+
+    // Batch write all updates in one API call
+    await gapi.client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      resource: {
+        valueInputOption: 'RAW',
+        data: updates
+      }
+    });
+
+    console.log(`✅ Wrote ${updates.length} resolved KO team(s) to sheet`);
+  } catch(e) {
+    // Non-critical — don't surface to user, just log
+    console.warn('writeResolvedKOTeams failed:', e);
+  }
+}
 async function clearScoreResult() {
   if (!_editingMatch) return;
   // iOS-safe in-UI confirm — replace Clear button with two inline buttons
