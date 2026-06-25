@@ -124,16 +124,66 @@ function buildColumn(title, matches, rowSpans) {
   return html;
 }
 
-/* ── Build a connector between two columns ── */
-function buildConnector(pairCount, side = 'left') {
-  // pairCount = number of bracket pairs in the INCOMING column (left side)
-  // Each pair: two cards merge into one. We draw a ⌐ or ¬ shape per pair.
-  let html = `<div class="ko-connector" data-pairs="${pairCount}" data-side="${side}">`;
-  for (let i = 0; i < pairCount; i++) {
-    html += `<div class="ko-bracket-line ${side}"></div>`;
+/* ── Build an SVG connector placeholder between two columns ── */
+function buildConnector(id) {
+  return `<div class="ko-connector" id="${id}"><svg class="ko-connector-svg" id="${id}-svg"></svg></div>`;
+}
+
+/* ── Draw all bracket lines via SVG after DOM is painted ── */
+function drawBracketLines() {
+  const COLOR  = 'rgba(59,130,246,0.40)';
+  const STROKE = 2;
+
+  // Left side connectors: R32→R16 (4 pairs), R16→QF (2 pairs), QF→SF (1 pair)
+  [
+    { id: 'lconn-0', pairs: 4, side: 'left'  },
+    { id: 'lconn-1', pairs: 2, side: 'left'  },
+    { id: 'lconn-2', pairs: 1, side: 'left'  },
+  ].forEach(c => drawConnectorSVG(c.id, c.pairs, c.side, COLOR, STROKE));
+
+  // Right side connectors: SF→QF (1 pair), QF→R16 (2 pairs), R16→R32 (4 pairs)
+  [
+    { id: 'rconn-1', pairs: 1, side: 'right' },
+    { id: 'rconn-2', pairs: 2, side: 'right' },
+    { id: 'rconn-3', pairs: 4, side: 'right' },
+  ].forEach(c => drawConnectorSVG(c.id, c.pairs, c.side, COLOR, STROKE));
+}
+
+function drawConnectorSVG(connId, pairs, side, color, sw) {
+  const conn = document.getElementById(connId);
+  const svg  = document.getElementById(`${connId}-svg`);
+  if (!conn || !svg) return;
+
+  const W = conn.offsetWidth;
+  const H = conn.offsetHeight - 29; // subtract title padding
+  if (H <= 0) return;
+
+  svg.setAttribute('width',   W);
+  svg.setAttribute('height',  H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const slotH = H / (pairs * 2); // height per card slot
+  let paths = '';
+
+  for (let i = 0; i < pairs; i++) {
+    const topY = slotH * (i * 2)       + slotH / 2; // centre of top card
+    const botY = slotH * (i * 2 + 1)   + slotH / 2; // centre of bottom card
+    const midY = (topY + botY) / 2;                   // merge point
+    const barX = side === 'left' ? 2 : W - 2;         // vertical bar X
+    const outX = side === 'left' ? W  : 0;             // outgoing horizontal X
+
+    // Vertical bar connecting top+bottom card centres
+    paths += `<line x1="${barX}" y1="${topY}" x2="${barX}" y2="${botY}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    // Horizontal line from midpoint to next column
+    paths += `<line x1="${barX}" y1="${midY}" x2="${outX}" y2="${midY}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    // Small tick marks at top and bottom of the vertical bar
+    const tickLen = 6;
+    const tickX2  = side === 'left' ? barX + tickLen : barX - tickLen;
+    paths += `<line x1="${barX}" y1="${topY}" x2="${tickX2}" y2="${topY}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    paths += `<line x1="${barX}" y1="${botY}" x2="${tickX2}" y2="${botY}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
   }
-  html += `</div>`;
-  return html;
+
+  svg.innerHTML = paths;
 }
 
 /* ── Build the bracket ── */
@@ -202,10 +252,10 @@ function renderBracket(matches, allMatches) {
   let html = `<div class="ko-bracket-row">`;
 
   // ── Left side ──
-  html += `<div class="ko-side">`;
+  html += `<div class="ko-side" id="leftSide">`;
   leftColumns.forEach((col, idx) => {
     html += buildColumn(col.title, col.matches, col.spans);
-    if (idx < leftColumns.length - 1) html += buildConnector(leftColumns[idx + 1].matches.length, 'left');
+    if (idx < leftColumns.length - 1) html += buildConnector(`lconn-${idx}`);
   });
   html += `</div>`;
 
@@ -220,16 +270,18 @@ function renderBracket(matches, allMatches) {
   html += `</div>`;
 
   // ── Right side ──
-  html += `<div class="ko-side">`;
+  html += `<div class="ko-side" id="rightSide">`;
   rightColumns.forEach((col, idx) => {
-    if (idx > 0) html += buildConnector(rightColumns[idx - 1].matches.length, 'right');
+    if (idx > 0) html += buildConnector(`rconn-${idx}`);
     html += buildColumn(col.title, col.matches, col.spans);
   });
   html += `</div>`;
 
   html += `</div>`; // .ko-bracket-row
-
   wrap.innerHTML = html;
+
+  // Draw SVG bracket lines after DOM is painted
+  requestAnimationFrame(() => requestAnimationFrame(() => drawBracketLines()));
 }
 
 async function loadKnockout() {
