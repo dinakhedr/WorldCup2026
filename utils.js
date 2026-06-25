@@ -12,10 +12,8 @@ const DISCOVERY_DOCS = [
   'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
 ];
 
-const SHEET_GM       = 'Group Matches';
-const SHEET_MATCHES  = 'Matches';
+const SHEET_GM       = 'Matches';
 const SHEET_STANDING = 'Standings';
-const SHEET_KO       = 'Knockout Results';
 
 // ── Group colors ───────────────────────────────────────────
 const GRP_COLORS = {
