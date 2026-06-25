@@ -799,6 +799,43 @@ body {
   min-width: max-content;
 }
 
+/* Each bracket line connects a pair of cards into the next round */
+.ko-bracket-line {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+/* Vertical bar on the card side */
+.ko-bracket-line::before {
+  content: '';
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0.35;
+}
+
+/* Horizontal bar connecting to next column */
+.ko-bracket-line::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0.35;
+  transform: translateY(-50%);
+}
+/* Left side: vertical bar on left, horizontal goes right */
+.ko-bracket-line.left::before { left: 0; }
+.ko-bracket-line.left::after  { left: 0; }
+
+/* Right side: vertical bar on right, horizontal goes left */
+.ko-bracket-line.right::before { right: 0; }
+.ko-bracket-line.right::after  { right: 0; }
+
 .ko-side {
   display: flex;
   flex-direction: row;
@@ -872,10 +909,12 @@ body {
 .ko-connector {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-width: 20px;
+  justify-content: space-around;
+  align-items: stretch;
+  width: 20px;
   flex-shrink: 0;
+  align-self: stretch;
+  padding: 0;
 }
 
 .ko-connector .line {
