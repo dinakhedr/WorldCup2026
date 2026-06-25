@@ -234,6 +234,18 @@ function formatDateLabel(d) {
   } catch(e) { return d; }
 }
 
+// Input: date "28-Jun-26", time "22:00" → "Sun, Jun 28, 10:00 PM"
+function formatCardDateTime(date, time) {
+  try {
+    const parts = date.split('-');
+    const dt = new Date(`${parts[1]} ${parts[0]}, 20${parts[2]}`);
+    if (isNaN(dt)) return `${date} · ${formatTime12(time)}`;
+    const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${days[dt.getDay()]}, ${months[dt.getMonth()]} ${parseInt(parts[0])}, ${formatTime12(time)}`;
+  } catch(e) { return `${date} · ${formatTime12(time)}`; }
+}
+
 // ── Row parser (Group Matches sheet) ──────────────────────
 // Cols: A=#  B=Grp  C=Date  D=Time  E=Home  F=Hg  G=Ag  H=PenH  I=PenA  J=Away  K=Venue  L=City  M=Country  N=Winner  O=Status
 function parseGMRow(row, rowIndex) {
@@ -353,7 +365,7 @@ function matchCardHTML(m, opts = {}) {
   const venueStr  = [m.venue, m.city, m.country].filter(Boolean).join(' · ');
   const penBadge  = (played && m.penH !== '' && m.penA !== '')
     ? `<span class="pen-badge">Pen ${m.penH}–${m.penA}</span>` : '';
-  const dateLine  = showDate ? `<span class="match-date-inline">${m.date} · </span>` : '';
+  const dateLine  = showDate ? formatCardDateTime(m.date, m.time) : '';
   const isUpcoming = m.status !== 'Played';
   const notifActive = isUpcoming && isNotifScheduled(m.num);
   const bellBtn = isUpcoming
@@ -366,7 +378,7 @@ function matchCardHTML(m, opts = {}) {
           <span class="stage-badge" style="background:${badgeBg};color:${badgeTxt}">${badgeLabel}</span>
           <span class="match-time" style="display:flex;align-items:center;gap:6px;">${played
             ? '<span class="played-dot"></span>FT'
-            : `${dateLine}${timeStr} Cairo`}${bellBtn}</span>
+            : `${dateLine || formatCardDateTime(m.date, m.time)} Cairo`}${bellBtn}</span>
         </div>
         <div class="teams-row">
           <div style="display:flex;flex-direction:column;gap:3px;">
