@@ -375,10 +375,10 @@ function matchCardHTML(m, opts = {}) {
     <div class="match-card${played ? ' played' : ''}" style="--card-acc:${acc}" onclick="${onclick}">
       <div class="card-inner">
         <div class="card-top">
-          <span class="stage-badge" style="background:${badgeBg};color:${badgeTxt}">${badgeLabel}</span><span class="match-num-lbl">M${m.num}</span>
+          <span class="stage-badge" style="background:${badgeBg};color:${badgeTxt}">${badgeLabel}</span>
           <span class="match-time" style="display:flex;align-items:center;gap:6px;">${played
             ? '<span class="played-dot"></span>FT'
-            : `${dateLine || formatCardDateTime(m.date, m.time)} Cairo`}${bellBtn}</span>
+            : `${dateLine || formatCardDateTime(m.date, m.time)}`}${bellBtn}</span>
         </div>
         <div class="teams-row">
           <div style="display:flex;flex-direction:column;gap:3px;">
@@ -393,7 +393,7 @@ function matchCardHTML(m, opts = {}) {
         </div>
       </div>
       <div class="card-bottom">
-        <span class="venue-txt">📍 ${venueStr}</span>
+        <span class="venue-txt"><span class="match-num-lbl">M${m.num}</span> · 📍 ${venueStr}</span>
         ${penBadge}
       </div>
       </div>
