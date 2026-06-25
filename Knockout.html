@@ -36,11 +36,11 @@
   <div class="page-header">
     <div class="header-row">
       <div class="header-left">
-        <a class="back-btn" href="Home.html">‹</a>
-        <div class="page-title">⚡ Knockout Stage</div>
+        <a class="back-btn" href="Home.html">&#x2039;</a>
+        <div class="page-title">&#x26A1; Knockout Stage</div>
       </div>
       <div class="header-actions">
-        <button class="hdr-btn" onclick="syncKnockout()" title="Refresh">🔄</button>
+        <button class="hdr-btn" onclick="syncKnockout()" title="Refresh">&#x1F504;</button>
       </div>
     </div>
     <div class="mini-stats">
@@ -64,224 +64,122 @@
 <script>
 window._onScoreSaved = async function() { await loadKnockout(); };
 
-/* ── Build a single match card ── */
+/* ── Build a single KO match card ── */
 function buildKOCard(m) {
   if (!m) {
-    return `<div class="ko-card" style="opacity:0.3;pointer-events:none;">
-      <div class="ko-card-meta">—</div>
-      <div class="ko-team"><span class="ko-team-name tbd">TBD</span></div>
-      <div class="ko-team"><span class="ko-team-name tbd">TBD</span></div>
-      <div class="ko-card-venue">—</div>
-    </div>`;
+    return '<div class="ko-card" style="opacity:0.3;pointer-events:none;">' +
+      '<div class="ko-card-meta">—</div>' +
+      '<div class="ko-team"><span class="ko-team-name tbd">TBD</span></div>' +
+      '<div class="ko-team"><span class="ko-team-name tbd">TBD</span></div>' +
+      '<div class="ko-card-venue">—</div></div>';
   }
 
-  const played  = m.status === 'Played';
-  const homeWin = played && m.winner === m.home;
-  const awayWin = played && m.winner === m.away;
-  const homeTBD = m.home.startsWith('TBD');
-  const awayTBD = m.away.startsWith('TBD');
+  const played   = m.status === 'Played';
+  const homeWin  = played && m.winner === m.home;
+  const awayWin  = played && m.winner === m.away;
+  const homeTBD  = !m.home || m.home.startsWith('TBD');
+  const awayTBD  = !m.away || m.away.startsWith('TBD');
 
-  const homeNameClass = `ko-team-name${homeTBD ? ' tbd' : homeWin ? ' winner' : ''}`;
-  const awayNameClass = `ko-team-name${awayTBD ? ' tbd' : awayWin ? ' winner' : ''}`;
-  const homeScoreClass = `ko-team-score${homeWin ? ' winner' : ''}`;
-  const awayScoreClass = `ko-team-score${awayWin ? ' winner' : ''}`;
+  const homeNameClass  = 'ko-team-name' + (homeTBD ? ' tbd' : homeWin ? ' winner' : '');
+  const awayNameClass  = 'ko-team-name' + (awayTBD ? ' tbd' : awayWin ? ' winner' : '');
+  const homeScoreClass = 'ko-team-score' + (homeWin ? ' winner' : '');
+  const awayScoreClass = 'ko-team-score' + (awayWin ? ' winner' : '');
 
-  const homeScore = played ? `<span class="${homeScoreClass}">${m.homeScore}</span>` : '';
-  const awayScore = played ? `<span class="${awayScoreClass}">${m.awayScore}</span>` : '';
+  const homeScore = played ? '<span class="' + homeScoreClass + '">' + m.homeScore + '</span>' : '';
+  const awayScore = played ? '<span class="' + awayScoreClass + '">' + m.awayScore + '</span>' : '';
+  const penLine   = (played && m.penH !== '' && m.penA !== '')
+    ? '<div class="ko-pen">Pen ' + m.penH + '\u2013' + m.penA + '</div>' : '';
 
-  const penLine = (played && m.penH !== '' && m.penA !== '')
-    ? `<div class="ko-pen">Pen ${m.penH}–${m.penA}</div>` : '';
+  const metaLine = 'M' + m.num + ' \u00B7 ' + formatCardDateTime(m.date, m.time);
+  const venue    = m.city ? '\uD83D\uDCCD ' + m.city : '';
 
-  const metaLine = `M${m.num} · ${formatCardDateTime(m.date, m.time)}`;
-  const venue = m.city ? `📍 ${m.city}` : '';
-
-  return `
-    <div class="ko-card${played ? ' played' : ''}" onclick="openScoreModal(${m.num})">
-      <div class="ko-card-meta">${metaLine}</div>
-      <div class="ko-team">
-        <span class="${homeNameClass}">${escHtml(m.home || 'TBD')}</span>
-        ${homeScore}
-      </div>
-      <div class="ko-team">
-        <span class="${awayNameClass}">${escHtml(m.away || 'TBD')}</span>
-        ${awayScore}
-      </div>
-      ${penLine}
-      ${venue ? `<div class="ko-card-venue">${venue}</div>` : ''}
-    </div>`;
+  return '<div class="ko-card' + (played ? ' played' : '') + '" onclick="openScoreModal(' + m.num + ')">' +
+    '<div class="ko-card-meta">' + metaLine + '</div>' +
+    '<div class="ko-team"><span class="' + homeNameClass + '">' + escHtml(m.home || 'TBD') + '</span>' + homeScore + '</div>' +
+    '<div class="ko-team"><span class="' + awayNameClass + '">' + escHtml(m.away || 'TBD') + '</span>' + awayScore + '</div>' +
+    penLine +
+    (venue ? '<div class="ko-card-venue">' + venue + '</div>' : '') +
+    '</div>';
 }
 
-/* ── Build a column of matches with given row spans ── */
-function buildColumn(title, matches, rowSpans) {
-  let html = `<div class="ko-column-wrapper">
-    <div class="ko-column-title">${title}</div>
-    <div class="ko-column">`;
-  matches.forEach((m, idx) => {
-    const span = rowSpans[idx] || 1;
-    html += `<div class="ko-slot" style="grid-row: span ${span};">${buildKOCard(m)}</div>`;
-  });
-  html += `</div></div>`;
-  return html;
+/* ── Round section header ── */
+function buildRoundHeader(label, emoji) {
+  return '<div class="ko-round-header"><span class="ko-round-label">' + (emoji ? emoji + ' ' : '') + label + '</span></div>';
 }
 
-/* ── Build an SVG connector placeholder between two columns ── */
-function buildConnector(id) {
-  return `<div class="ko-connector" id="${id}"><svg class="ko-connector-svg" id="${id}-svg"></svg></div>`;
+/* ── Bracket pair: two feed cards → one result card ── */
+function buildPair(topCard, botCard, resultCard) {
+  return '<div class="ko-pair-group">' +
+    '<div class="ko-pair-cards">' + topCard + botCard + '</div>' +
+    '<div class="ko-pair-connector"></div>' +
+    '<div class="ko-pair-result">' + resultCard + '</div>' +
+    '</div>';
 }
 
-/* ── Draw all bracket lines via SVG after DOM is painted ── */
-function drawBracketLines() {
-  const COLOR  = 'rgba(59,130,246,0.40)';
-  const STROKE = 2;
-
-  // Left side connectors: R32→R16 (4 pairs), R16→QF (2 pairs), QF→SF (1 pair)
-  [
-    { id: 'lconn-0', pairs: 4, side: 'left'  },
-    { id: 'lconn-1', pairs: 2, side: 'left'  },
-    { id: 'lconn-2', pairs: 1, side: 'left'  },
-  ].forEach(c => drawConnectorSVG(c.id, c.pairs, c.side, COLOR, STROKE));
-
-  // Right side connectors: SF→QF (1 pair), QF→R16 (2 pairs), R16→R32 (4 pairs)
-  [
-    { id: 'rconn-1', pairs: 1, side: 'right' },
-    { id: 'rconn-2', pairs: 2, side: 'right' },
-    { id: 'rconn-3', pairs: 4, side: 'right' },
-  ].forEach(c => drawConnectorSVG(c.id, c.pairs, c.side, COLOR, STROKE));
-}
-
-function drawConnectorSVG(connId, pairs, side, color, sw) {
-  const conn = document.getElementById(connId);
-  const svg  = document.getElementById(`${connId}-svg`);
-  if (!conn || !svg) return;
-
-  const W = conn.offsetWidth;
-  const H = conn.offsetHeight - 29; // subtract title padding
-  if (H <= 0) return;
-
-  svg.setAttribute('width',   W);
-  svg.setAttribute('height',  H);
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-  const slotH = H / (pairs * 2); // height per card slot
-  let paths = '';
-
-  for (let i = 0; i < pairs; i++) {
-    const topY = slotH * (i * 2)       + slotH / 2; // centre of top card
-    const botY = slotH * (i * 2 + 1)   + slotH / 2; // centre of bottom card
-    const midY = (topY + botY) / 2;                   // merge point
-    const barX = side === 'left' ? 2 : W - 2;         // vertical bar X
-    const outX = side === 'left' ? W  : 0;             // outgoing horizontal X
-
-    // Vertical bar connecting top+bottom card centres
-    paths += `<line x1="${barX}" y1="${topY}" x2="${barX}" y2="${botY}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
-    // Horizontal line from midpoint to next column
-    paths += `<line x1="${barX}" y1="${midY}" x2="${outX}" y2="${midY}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
-    // Small tick marks at top and bottom of the vertical bar
-    const tickLen = 6;
-    const tickX2  = side === 'left' ? barX + tickLen : barX - tickLen;
-    paths += `<line x1="${barX}" y1="${topY}" x2="${tickX2}" y2="${topY}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
-    paths += `<line x1="${barX}" y1="${botY}" x2="${tickX2}" y2="${botY}" stroke="${color}" stroke-width="${sw}" stroke-linecap="round"/>`;
-  }
-
-  svg.innerHTML = paths;
-}
-
-/* ── Build the bracket ── */
+/* ── Render full vertical bracket ── */
 function renderBracket(matches, allMatches) {
   const wrap = document.getElementById('koWrap');
 
   if (!matches.length) {
-    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🏆</div><div class="empty-txt">No knockout matches found</div></div>`;
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">\uD83C\uDFC6</div><div class="empty-txt">No knockout matches found</div></div>';
     return;
   }
 
-  // Resolve R32 TBDs
+  // Resolve R32 TBD slots from group standings
   const { standings, thirdPlaceTeams } = buildAllStandings(allMatches);
-  matches = matches.map(m => {
+  matches = matches.map(function(m) {
     if (m.group !== 'Round of 32') return m;
     const seeding = R32_SEEDING[m.num];
     if (!seeding) return m;
     const resolvedHome = resolveR32Slot(seeding.home, standings, thirdPlaceTeams, allMatches);
     const resolvedAway = resolveR32Slot(seeding.away, standings, thirdPlaceTeams, allMatches);
-    return {
-      ...m,
+    return Object.assign({}, m, {
       home: resolvedHome || m.home,
       away: resolvedAway || m.away,
-    };
+    });
   });
 
-  // Create maps for quick lookup
-  const matchMap = {};
-  matches.forEach(m => { matchMap[m.num] = m; });
+  const mm = {};
+  matches.forEach(function(m) { mm[m.num] = m; });
 
-  // Define the bracket structure for left and right sides
-  // Left side (top half): R32 (73-80) -> R16 (89-92) -> QF (97-98) -> SF (101)
-  // Right side (bottom half): SF (102) -> QF (99-100) -> R16 (93-96) -> R32 (81-88)
-  // Centre: Final (104), Bronze (103)
+  let html = '<div class="ko-round-section">';
 
-// REPLACE renderBracket() match ordering:
-  const leftR32 = [74,77,73,75,83,84,81,82].map(n => matchMap[n]);
-  const leftR16 = [89,90,93,94].map(n => matchMap[n]);
-  const leftQF  = [97,98].map(n => matchMap[n]);
-  const leftSF  = [101].map(n => matchMap[n]);
+  /* ── R32 → R16  Left bracket ── */
+  html += buildRoundHeader('Round of 32 \u2192 Round of 16 \u00B7 Left', '\u26A1');
+  html += buildPair(buildKOCard(mm[74]), buildKOCard(mm[77]), buildKOCard(mm[89]));
+  html += buildPair(buildKOCard(mm[73]), buildKOCard(mm[75]), buildKOCard(mm[90]));
+  html += buildPair(buildKOCard(mm[83]), buildKOCard(mm[84]), buildKOCard(mm[93]));
+  html += buildPair(buildKOCard(mm[81]), buildKOCard(mm[82]), buildKOCard(mm[94]));
 
-  const rightSF  = [102].map(n => matchMap[n]);
-  const rightQF  = [99,100].map(n => matchMap[n]);
-  const rightR16 = [91,92,95,96].map(n => matchMap[n]);
-  const rightR32 = [76,78,79,80,86,88,85,87].map(n => matchMap[n]);
+  /* ── R32 → R16  Right bracket ── */
+  html += buildRoundHeader('Round of 32 \u2192 Round of 16 \u00B7 Right', '\u26A1');
+  html += buildPair(buildKOCard(mm[76]), buildKOCard(mm[78]), buildKOCard(mm[91]));
+  html += buildPair(buildKOCard(mm[79]), buildKOCard(mm[80]), buildKOCard(mm[92]));
+  html += buildPair(buildKOCard(mm[86]), buildKOCard(mm[88]), buildKOCard(mm[95]));
+  html += buildPair(buildKOCard(mm[85]), buildKOCard(mm[87]), buildKOCard(mm[96]));
 
-  const finalM = matchMap[104];
-  const bronzeM = matchMap[103];
+  /* ── R16 → QF ── */
+  html += buildRoundHeader('Round of 16 \u2192 Quarter-Final', '\u26A1');
+  html += buildPair(buildKOCard(mm[89]), buildKOCard(mm[90]), buildKOCard(mm[97]));
+  html += buildPair(buildKOCard(mm[93]), buildKOCard(mm[94]), buildKOCard(mm[98]));
+  html += buildPair(buildKOCard(mm[91]), buildKOCard(mm[92]), buildKOCard(mm[99]));
+  html += buildPair(buildKOCard(mm[95]), buildKOCard(mm[96]), buildKOCard(mm[100]));
 
-  // Row spans for each round (left side, from outer to inner)
-  const leftColumns = [
-    { title: 'Round of 32', matches: leftR32, spans: [1,1,1,1,1,1,1,1] },
-    { title: 'Round of 16', matches: leftR16, spans: [2,2,2,2] },
-    { title: 'Quarter-Final', matches: leftQF, spans: [4,4] },
-    { title: 'Semi-Final', matches: leftSF, spans: [8] },
-  ];
+  /* ── QF → SF ── */
+  html += buildRoundHeader('Quarter-Final \u2192 Semi-Final', '\u26A1');
+  html += buildPair(buildKOCard(mm[97]), buildKOCard(mm[98]), buildKOCard(mm[101]));
+  html += buildPair(buildKOCard(mm[99]), buildKOCard(mm[100]), buildKOCard(mm[102]));
 
-  // Right side (inner to outer)
-  const rightColumns = [
-    { title: 'Semi-Final', matches: rightSF, spans: [8] },
-    { title: 'Quarter-Final', matches: rightQF, spans: [4,4] },
-    { title: 'Round of 16', matches: rightR16, spans: [2,2,2,2] },
-    { title: 'Round of 32', matches: rightR32, spans: [1,1,1,1,1,1,1,1] },
-  ];
+  /* ── SF → Final ── */
+  html += buildRoundHeader('Semi-Final \u2192 Final', '\uD83C\uDFC6');
+  html += buildPair(buildKOCard(mm[101]), buildKOCard(mm[102]), buildKOCard(mm[104]));
 
-  let html = `<div class="ko-bracket-row">`;
+  /* ── Bronze Medal ── */
+  html += buildRoundHeader('Bronze Medal', '\uD83E\uDD49');
+  html += '<div class="ko-single">' + buildKOCard(mm[103]) + '</div>';
 
-  // ── Left side ──
-  html += `<div class="ko-side" id="leftSide">`;
-  leftColumns.forEach((col, idx) => {
-    html += buildColumn(col.title, col.matches, col.spans);
-    if (idx < leftColumns.length - 1) html += buildConnector(`lconn-${idx}`);
-  });
-  html += `</div>`;
-
-  // ── Centre (Final & Bronze) ──
-  html += `<div class="ko-centre-col">`;
-  html += `<div class="ko-round-title">🏆 Final</div>`;
-  html += `<div class="ko-slot">${buildKOCard(finalM)}</div>`;
-  if (bronzeM) {
-    html += `<div style="margin-top:12px;"><div class="ko-round-title" style="font-size:8px;">🥉 Bronze Medal</div>`;
-    html += `<div class="ko-slot">${buildKOCard(bronzeM)}</div></div>`;
-  }
-  html += `</div>`;
-
-  // ── Right side ──
-  html += `<div class="ko-side" id="rightSide">`;
-  rightColumns.forEach((col, idx) => {
-    if (idx > 0) html += buildConnector(`rconn-${idx}`);
-    html += buildColumn(col.title, col.matches, col.spans);
-  });
-  html += `</div>`;
-
-  html += `</div>`; // .ko-bracket-row
+  html += '</div>';
   wrap.innerHTML = html;
-
-  // Draw SVG bracket lines after DOM is painted
-  requestAnimationFrame(() => requestAnimationFrame(() => drawBracketLines()));
 }
 
 async function loadKnockout() {
@@ -302,16 +200,16 @@ async function loadKnockout() {
   } catch(err) {
     console.error(err);
     document.getElementById('koWrap').innerHTML =
-      `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-txt">Failed to load knockout stage</div></div>`;
+      '<div class="empty-state"><div class="empty-icon">&#x26A0;&#xFE0F;</div><div class="empty-txt">Failed to load knockout stage</div></div>';
     showToast('Failed to load knockout matches', 'error');
   }
 }
 
 async function syncKnockout() {
-  showToast('Refreshing…');
+  showToast('Refreshing\u2026');
   await loadAllMatches(true);
   await loadKnockout();
-  showToast('✅ Updated');
+  showToast('\u2705 Updated');
 }
 
 window.onload = async function() {
