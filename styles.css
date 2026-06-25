@@ -969,7 +969,12 @@ body {
   padding: 1px 9px 4px 11px;
   border-top: none;
 }
-
+.match-num-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  margin-left: 6px;
+}
 /* ════════════════════════════════════════════════════════════
    RESPONSIVE
    ════════════════════════════════════════════════════════════ */
