@@ -92,7 +92,7 @@ function buildKOCard(m) {
   const penLine = (played && m.penH !== '' && m.penA !== '')
     ? `<div class="ko-pen">Pen ${m.penH}–${m.penA}</div>` : '';
 
-  const metaLine = formatCardDateTime(m.date, m.time);
+  const metaLine = `M${m.num} · ${formatCardDateTime(m.date, m.time)}`;
   const venue = m.city ? `📍 ${m.city}` : '';
 
   return `
