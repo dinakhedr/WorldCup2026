@@ -125,19 +125,8 @@ function renderBracket(matches, allMatches) {
     return;
   }
 
-  // Resolve R32 TBD slots from group standings
-  const { standings, thirdPlaceTeams } = buildAllStandings(allMatches);
-  matches = matches.map(function(m) {
-    if (m.group !== 'Round of 32') return m;
-    const seeding = R32_SEEDING[m.num];
-    if (!seeding) return m;
-    const resolvedHome = resolveR32Slot(seeding.home, standings, thirdPlaceTeams, allMatches);
-    const resolvedAway = resolveR32Slot(seeding.away, standings, thirdPlaceTeams, allMatches);
-    return Object.assign({}, m, {
-      home: resolvedHome || m.home,
-      away: resolvedAway || m.away,
-    });
-  });
+  // R32 teams are now read directly from the sheet (manually set by FIFA schedule).
+  // No slot resolution needed — sheet values are authoritative.
 
   const mm = {};
   matches.forEach(function(m) { mm[m.num] = m; });
@@ -181,7 +170,7 @@ function renderBracket(matches, allMatches) {
   html += '</div>';
   wrap.innerHTML = html;
 }
-
+  
 async function loadKnockout() {
   try {
     const allMatches = await loadAllMatches();
@@ -196,7 +185,7 @@ async function loadKnockout() {
     document.getElementById('playedKO').textContent    = played;
     document.getElementById('remainingKO').textContent = remaining;
 
-    renderBracket(koMatches, allMatches);
+    renderBracket(koMatches);
   } catch(err) {
     console.error(err);
     document.getElementById('koWrap').innerHTML =
