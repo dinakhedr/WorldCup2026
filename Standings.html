@@ -432,6 +432,7 @@ function renderBubble(groupData) {
         <th>D</th>
         <th>L</th>
         <th>GD</th>
+        <th>TCS</th>
         <th>Pts</th>
       </tr>
     </thead>
@@ -465,13 +466,14 @@ function renderBubble(groupData) {
       <td>${t.draws}</td>
       <td>${t.losses}</td>
       <td>${t.played > 0 ? gdStr : '—'}</td>
+      <td>${t.played > 0 ? t.fairPlay : '—'}</td>
       <td class="${ptsClass}">${t.points}</td>
     </tr>`;
 
     // Cut line after position 8
     if (rank === ADVANCE && !cutTied) {
       html += `<tr class="bubble-cutline">
-        <td colspan="8" style="padding:0;height:0;position:relative;">
+        <td colspan="9" style="padding:0;height:0;position:relative;">
           <span class="cutline-label">cut ✂</span>
         </td>
       </tr>`;
