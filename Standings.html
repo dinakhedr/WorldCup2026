@@ -290,8 +290,8 @@ const MATCHES_PER_GROUP = 6; // 4 teams × 3 matches each / 2 = 6
 function computeGroup(groupId, matches) {
   const teams = GROUPS_TEAMS[groupId] || [];
   const stats = {};
-  teams.forEach(t => {
-    stats[t] = { played:0, wins:0, draws:0, losses:0, gf:0, ga:0, gd:0, points:0 };
+teams.forEach(t => {
+    stats[t] = { played:0, wins:0, draws:0, losses:0, gf:0, ga:0, gd:0, points:0, fairPlay:0 };
   });
   matches.forEach(m => {
     if (m.status !== 'Played') return;
@@ -304,6 +304,8 @@ function computeGroup(groupId, matches) {
     if (hg > ag)      { stats[h].wins++; stats[a].losses++; stats[h].points += 3; }
     else if (ag > hg) { stats[a].wins++; stats[h].losses++; stats[a].points += 3; }
     else              { stats[h].draws++; stats[a].draws++; stats[h].points++; stats[a].points++; }
+    stats[h].fairPlay += (parseInt(m.homeYellow)||0)*-1 + (parseInt(m.homeRed)||0)*-3;
+    stats[a].fairPlay += (parseInt(m.awayYellow)||0)*-1 + (parseInt(m.awayRed)||0)*-3;
   });
   for (let t in stats) stats[t].gd = stats[t].gf - stats[t].ga;
   return teams
