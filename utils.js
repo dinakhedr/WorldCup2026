@@ -569,56 +569,105 @@ async function saveScoreResult() {
 }
 
 /* ── Write resolved KO team names back to the sheet ──────────
-   Called after every score save. Resolves R32 slots from current
-   standings and writes team names (with flags) to cols E & J.
-   Only writes cells that have changed from their current value.  */
+   Called after every score save.
+   1. Resolves R32 slots from group standings → writes to R32 match cells
+   2. Propagates KO winners to next-round match cells               */
 async function writeResolvedKOTeams() {
   try {
     const allMatches = await loadAllMatches(true);
     const { standings, thirdPlaceTeams } = buildAllStandings(allMatches);
 
-    // Build list of sheet updates needed
     const updates = [];
 
+    // ── Part 1: R32 team names from group standings (existing logic) ──
     for (const [num, seeding] of Object.entries(R32_SEEDING)) {
       const matchNum = parseInt(num);
       const m = allMatches.find(x => x.num === matchNum);
       if (!m) continue;
-
       const resolvedHome = resolveR32Slot(seeding.home, standings, thirdPlaceTeams, allMatches);
       const resolvedAway = resolveR32Slot(seeding.away, standings, thirdPlaceTeams, allMatches);
-
       const sheetRow = m.rowIndex + 1;
+      if (resolvedHome && resolvedHome !== m.home)
+        updates.push({ range: `${SHEET_GM}!E${sheetRow}`, values: [[resolvedHome]] });
+      if (resolvedAway && resolvedAway !== m.away)
+        updates.push({ range: `${SHEET_GM}!J${sheetRow}`, values: [[resolvedAway]] });
+    }
 
-      // Only write if resolved and different from current cell value
-      if (resolvedHome && resolvedHome !== m.home) {
-        updates.push({
-          range: `${SHEET_GM}!E${sheetRow}`,
-          values: [[resolvedHome]]
-        });
+    // ── Part 2: KO winner propagation to next round ──
+    // Map: matchNum → { nextMatchNum, slot:'home'|'away' }
+    // For Bronze (103): loser of SF, not winner
+    const KO_NEXT = {
+       73: { next: 90, slot: 'home' },
+       74: { next: 89, slot: 'home' },
+       75: { next: 90, slot: 'away' },
+       76: { next: 91, slot: 'home' },
+       77: { next: 89, slot: 'away' },
+       78: { next: 91, slot: 'away' },
+       79: { next: 92, slot: 'home' },
+       80: { next: 92, slot: 'away' },
+       81: { next: 94, slot: 'home' },
+       82: { next: 94, slot: 'away' },
+       83: { next: 93, slot: 'home' },
+       84: { next: 93, slot: 'away' },
+       85: { next: 96, slot: 'home' },
+       86: { next: 95, slot: 'home' },
+       87: { next: 96, slot: 'away' },
+       88: { next: 95, slot: 'away' },
+       89: { next: 97, slot: 'home' },
+       90: { next: 97, slot: 'away' },
+       91: { next: 99, slot: 'home' },
+       92: { next: 99, slot: 'away' },
+       93: { next: 98, slot: 'home' },
+       94: { next: 98, slot: 'away' },
+       95: { next: 100, slot: 'home' },
+       96: { next: 100, slot: 'away' },
+       97: { next: 101, slot: 'home', loserNext: 103, loserSlot: 'home' },
+       98: { next: 101, slot: 'away', loserNext: 103, loserSlot: 'away' },
+       99: { next: 102, slot: 'home' },
+      100: { next: 102, slot: 'away' },
+      101: { next: 104, slot: 'home' },
+      102: { next: 104, slot: 'away' },
+    };
+
+    for (const [num, mapping] of Object.entries(KO_NEXT)) {
+      const matchNum = parseInt(num);
+      const m = allMatches.find(x => x.num === matchNum);
+      if (!m || m.status !== 'Played' || !m.winner) continue;
+
+      const loser = m.winner === m.home ? m.away : m.home;
+
+      // Write winner to next round
+      const nextM = allMatches.find(x => x.num === mapping.next);
+      if (nextM) {
+        const col = mapping.slot === 'home' ? 'E' : 'J';
+        const currentVal = mapping.slot === 'home' ? nextM.home : nextM.away;
+        if (m.winner && m.winner !== currentVal) {
+          updates.push({ range: `${SHEET_GM}!${col}${nextM.rowIndex + 1}`, values: [[m.winner]] });
+        }
       }
-      if (resolvedAway && resolvedAway !== m.away) {
-        updates.push({
-          range: `${SHEET_GM}!J${sheetRow}`,
-          values: [[resolvedAway]]
-        });
+
+      // Write loser to Bronze match (SF only)
+      if (mapping.loserNext) {
+        const bronzeM = allMatches.find(x => x.num === mapping.loserNext);
+        if (bronzeM) {
+          const col = mapping.loserSlot === 'home' ? 'E' : 'J';
+          const currentVal = mapping.loserSlot === 'home' ? bronzeM.home : bronzeM.away;
+          if (loser && loser !== currentVal) {
+            updates.push({ range: `${SHEET_GM}!${col}${bronzeM.rowIndex + 1}`, values: [[loser]] });
+          }
+        }
       }
     }
 
-    if (!updates.length) return; // nothing to write
+    if (!updates.length) return;
 
-    // Batch write all updates in one API call
     await gapi.client.sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
-      resource: {
-        valueInputOption: 'RAW',
-        data: updates
-      }
+      resource: { valueInputOption: 'RAW', data: updates }
     });
 
     console.log(`✅ Wrote ${updates.length} resolved KO team(s) to sheet`);
   } catch(e) {
-    // Non-critical — don't surface to user, just log
     console.warn('writeResolvedKOTeams failed:', e);
   }
 }
