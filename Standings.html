@@ -385,7 +385,7 @@ function renderBubble(groupData) {
   });
 
   // Sort by pts → gd → gf (same as FIFA tiebreaker for best 3rd)
-  thirds.sort((a,b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf);
+  thirds.sort((a,b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || b.fairPlay - a.fairPlay);
 
   // Top 8 go through, positions 9-12 eliminated
   const ADVANCE = 8;
