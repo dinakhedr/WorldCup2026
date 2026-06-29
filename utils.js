@@ -364,7 +364,7 @@ function matchCardHTML(m, opts = {}) {
   const awayClass = `team-name away${awayWin ? ' winner-team' : ''}`;
   const venueStr  = m.country || '';
   const penBadge  = (played && m.penH !== '' && m.penA !== '')
-    ? `<span class="pen-badge">Pen ${m.penH}–${m.penA}</span>` : '';
+    ? `<span class="pen-badge">🥅 Pen ${m.penH}–${m.penA}</span>` : '';
   const dateLine  = showDate ? formatCardDateTime(m.date, m.time) : '';
   const isUpcoming = m.status !== 'Played';
   const notifActive = isUpcoming && isNotifScheduled(m.num);
