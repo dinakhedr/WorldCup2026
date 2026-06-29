@@ -363,8 +363,8 @@ function matchCardHTML(m, opts = {}) {
   const homeClass = `team-name${homeWin ? ' winner-team' : ''}`;
   const awayClass = `team-name away${awayWin ? ' winner-team' : ''}`;
   const venueStr  = m.country || '';
-  const penBadge  = (played && m.penH !== '' && m.penA !== '')
-    ? `<span class="pen-badge">🥅 Pen ${m.penH}–${m.penA}</span>` : '';
+const penBadge  = (played && m.penH !== '' && m.penA !== '')
+    ? `<span class="pen-badge" style="font-size:13px;font-weight:700;padding:4px 10px;background:#fff3cd;color:#7B5800;border-radius:8px;">⚽ Pen ${m.penH}–${m.penA}</span>` : '';
   const dateLine  = showDate ? formatCardDateTime(m.date, m.time) : '';
   const isUpcoming = m.status !== 'Played';
   const notifActive = isUpcoming && isNotifScheduled(m.num);
