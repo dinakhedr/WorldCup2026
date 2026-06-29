@@ -579,18 +579,21 @@ async function writeResolvedKOTeams() {
 
     const updates = [];
 
-    // ── Part 1: R32 team names from group standings (existing logic) ──
+    // ── Part 1: R32 team names from group standings ──
+    // Only write if cell is empty in the sheet — never override manual entries
     for (const [num, seeding] of Object.entries(R32_SEEDING)) {
       const matchNum = parseInt(num);
       const m = allMatches.find(x => x.num === matchNum);
       if (!m) continue;
-      const resolvedHome = resolveR32Slot(seeding.home, standings, thirdPlaceTeams, allMatches);
-      const resolvedAway = resolveR32Slot(seeding.away, standings, thirdPlaceTeams, allMatches);
       const sheetRow = m.rowIndex + 1;
-      if (resolvedHome && resolvedHome !== m.home)
-        updates.push({ range: `${SHEET_GM}!E${sheetRow}`, values: [[resolvedHome]] });
-      if (resolvedAway && resolvedAway !== m.away)
-        updates.push({ range: `${SHEET_GM}!J${sheetRow}`, values: [[resolvedAway]] });
+      if (!m.home) {
+        const resolved = resolveR32Slot(seeding.home, standings, thirdPlaceTeams, allMatches);
+        if (resolved) updates.push({ range: `${SHEET_GM}!E${sheetRow}`, values: [[resolved]] });
+      }
+      if (!m.away) {
+        const resolved = resolveR32Slot(seeding.away, standings, thirdPlaceTeams, allMatches);
+        if (resolved) updates.push({ range: `${SHEET_GM}!J${sheetRow}`, values: [[resolved]] });
+      }
     }
 
     // ── Part 2: KO winner propagation to next round ──
