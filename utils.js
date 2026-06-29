@@ -362,7 +362,7 @@ function matchCardHTML(m, opts = {}) {
   const awayWin  = played && m.winner === m.away;
   const homeClass = `team-name${homeWin ? ' winner-team' : ''}`;
   const awayClass = `team-name away${awayWin ? ' winner-team' : ''}`;
-  const venueStr  = [m.venue, m.city, m.country].filter(Boolean).join(' · ');
+  const venueStr  = m.country || '';
   const penBadge  = (played && m.penH !== '' && m.penA !== '')
     ? `<span class="pen-badge">Pen ${m.penH}–${m.penA}</span>` : '';
   const dateLine  = showDate ? formatCardDateTime(m.date, m.time) : '';
