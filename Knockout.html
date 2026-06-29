@@ -88,10 +88,10 @@ function buildKOCard(m) {
   const homeScore = played ? '<span class="' + homeScoreClass + '">' + m.homeScore + '</span>' : '';
   const awayScore = played ? '<span class="' + awayScoreClass + '">' + m.awayScore + '</span>' : '';
   const penLine   = (played && m.penH !== '' && m.penA !== '')
-    ? '<div class="ko-pen">Pen ' + m.penH + '\u2013' + m.penA + '</div>' : '';
+    ? '<div class="ko-pen">\uD83E\uDD45 Pen <strong>' + m.penH + '\u2013' + m.penA + '</strong></div>' : '';
 
   const metaLine = 'M' + m.num + ' \u00B7 ' + formatCardDateTime(m.date, m.time);
-  const venue    = m.city ? '\uD83D\uDCCD ' + m.city : '';
+  const venue    = m.country ? '\uD83D\uDCCD ' + m.country : '';
 
   return '<div class="ko-card' + (played ? ' played' : '') + '" onclick="openScoreModal(' + m.num + ')">' +
     '<div class="ko-card-meta">' + metaLine + '</div>' +
