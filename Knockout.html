@@ -87,18 +87,18 @@ function buildKOCard(m) {
 
   const homeScore = played ? '<span class="' + homeScoreClass + '">' + m.homeScore + '</span>' : '';
   const awayScore = played ? '<span class="' + awayScoreClass + '">' + m.awayScore + '</span>' : '';
-  const penLine   = (played && m.penH !== '' && m.penA !== '')
+  const isDraw   = played && String(m.homeScore) === String(m.awayScore);
+  const penLine  = (isDraw && m.penH !== '' && m.penA !== '')
     ? '<div class="ko-pen" style="font-size:13px;font-weight:700;color:#7B5800;background:#fff3cd;border-radius:6px;padding:3px 8px;margin-top:4px;">⚽ Pen ' + m.penH + '\u2013' + m.penA + '</div>' : '';
 
-  const metaLine = 'M' + m.num + ' \u00B7 ' + formatCardDateTime(m.date, m.time);
-  const venue    = m.country ? '\uD83D\uDCCD ' + m.country : '';
-
+  const venue    = m.country ? ' \u00B7 \uD83D\uDCCD ' + m.country : '';
+  const metaLine = 'M' + m.num + ' \u00B7 ' + formatCardDateTime(m.date, m.time) + venue;
+  
   return '<div class="ko-card' + (played ? ' played' : '') + '" onclick="openScoreModal(' + m.num + ')">' +
     '<div class="ko-card-meta">' + metaLine + '</div>' +
     '<div class="ko-team"><span class="' + homeNameClass + '">' + escHtml(m.home || 'TBD') + '</span>' + homeScore + '</div>' +
     '<div class="ko-team"><span class="' + awayNameClass + '">' + escHtml(m.away || 'TBD') + '</span>' + awayScore + '</div>' +
     penLine +
-    (venue ? '<div class="ko-card-venue">' + venue + '</div>' : '') +
     '</div>';
 }
 
