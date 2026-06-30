@@ -347,26 +347,29 @@ function matchCardHTML(m, opts = {}) {
 
   const timeStr = formatTime12(m.time);
 
+  const homeWin  = played && m.winner === m.home;
+  const awayWin  = played && m.winner === m.away;
+  const isDraw   = played && String(m.homeScore) === String(m.awayScore);
+  const homeScoreWinner = homeWin && !isDraw;
+  const awayScoreWinner = awayWin && !isDraw;
+
   let scoreHTML;
   if (played) {
     scoreHTML = `<div class="score-box played">
-      <span class="score-digit played">${m.homeScore}</span>
+      <span class="score-digit played${homeScoreWinner ? ' score-winner' : ''}">${m.homeScore}</span>
       <span class="score-sep">:</span>
-      <span class="score-digit played">${m.awayScore}</span>
+      <span class="score-digit played${awayScoreWinner ? ' score-winner' : ''}">${m.awayScore}</span>
     </div>`;
   } else {
     scoreHTML = `<div class="score-box"><span class="score-vs">${timeStr}</span></div>`;
   }
 
-  const homeWin  = played && m.winner === m.home;
-  const awayWin  = played && m.winner === m.away;
   const homeClass = `team-name${homeWin ? ' winner-team' : ''}`;
   const awayClass = `team-name away${awayWin ? ' winner-team' : ''}`;
   const venueStr  = m.country || '';
   
-  const isDraw   = played && String(m.homeScore) === String(m.awayScore);
   const penBadge = (isDraw && m.penH !== '' && m.penA !== '')
-    ? `<span class="pen-badge" style="font-size:13px;font-weight:700;padding:4px 10px;background:#fff3cd;color:#7B5800;border-radius:8px;">⚽ Pen ${m.penH}–${m.penA}</span>` : '';
+    ? `<span class="pen-badge" style="...">⚽ Pen ${homeWin ? `<u>${m.penH}</u>` : m.penH}–${awayWin ? `<u>${m.penA}</u>` : m.penA}</span>` : '';
   
   const dateLine  = showDate ? formatCardDateTime(m.date, m.time) : '';
   const isUpcoming = m.status !== 'Played';
