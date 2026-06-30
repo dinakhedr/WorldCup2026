@@ -350,8 +350,8 @@ function matchCardHTML(m, opts = {}) {
   const homeWin  = played && m.winner === m.home;
   const awayWin  = played && m.winner === m.away;
   const isDraw   = played && String(m.homeScore) === String(m.awayScore);
-  const homeScoreWinner = homeWin && !isDraw;
-  const awayScoreWinner = awayWin && !isDraw;
+  const homeScoreWinner = homeWin;
+  const awayScoreWinner = awayWin;
 
   let scoreHTML;
   if (played) {
