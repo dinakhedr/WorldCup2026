@@ -63,32 +63,32 @@
         </div>
       </div>
 
-      <div class="filter-block">
-        <div class="filter-label">Team</div>
-        <select id="teamDropdown" class="team-dropdown" onchange="setTeam(this.value)">
-          <option value="">All Teams</option>
-        </select>
-      </div>
-
-      <div class="filter-block">
-        <div class="filter-label">Group Stage</div>
-        <div class="filter-chips" id="groupChips">
-          <button class="filter-chip on" data-group="all" onclick="setGroup('all')">All</button>
-          <button class="filter-chip" data-group="A" onclick="setGroup('A')">A</button>
-          <button class="filter-chip" data-group="B" onclick="setGroup('B')">B</button>
-          <button class="filter-chip" data-group="C" onclick="setGroup('C')">C</button>
-          <button class="filter-chip" data-group="D" onclick="setGroup('D')">D</button>
-          <button class="filter-chip" data-group="E" onclick="setGroup('E')">E</button>
-          <button class="filter-chip" data-group="F" onclick="setGroup('F')">F</button>
-          <button class="filter-chip" data-group="G" onclick="setGroup('G')">G</button>
-          <button class="filter-chip" data-group="H" onclick="setGroup('H')">H</button>
-          <button class="filter-chip" data-group="I" onclick="setGroup('I')">I</button>
-          <button class="filter-chip" data-group="J" onclick="setGroup('J')">J</button>
-          <button class="filter-chip" data-group="K" onclick="setGroup('K')">K</button>
-          <button class="filter-chip" data-group="L" onclick="setGroup('L')">L</button>
+      <div class="filter-row">
+        <div>
+          <div class="filter-label">Team</div>
+          <select id="teamDropdown" class="team-dropdown" onchange="setTeam(this.value)">
+            <option value="">All Teams</option>
+          </select>
+        </div>
+        <div>
+          <div class="filter-label">Group</div>
+          <select id="groupDropdown" class="team-dropdown" onchange="setGroup(this.value)">
+            <option value="all">All Groups</option>
+            <option value="A">Group A</option>
+            <option value="B">Group B</option>
+            <option value="C">Group C</option>
+            <option value="D">Group D</option>
+            <option value="E">Group E</option>
+            <option value="F">Group F</option>
+            <option value="G">Group G</option>
+            <option value="H">Group H</option>
+            <option value="I">Group I</option>
+            <option value="J">Group J</option>
+            <option value="K">Group K</option>
+            <option value="L">Group L</option>
+          </select>
         </div>
       </div>
-
       <div class="filter-block">
         <div class="filter-label">Knockout</div>
         <div class="filter-chips" id="koChips">
