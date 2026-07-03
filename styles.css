@@ -316,11 +316,81 @@ body {
   font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.38);
   text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px;
 }
-
+/* Filters Sections */
 .filter-section {
   background: rgba(255,255,255,0.04);
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding-bottom: 10px;
+  padding: 12px var(--page-pad) 14px;
+}
+.filter-block { margin-bottom: 10px; }
+.filter-block:last-child { margin-bottom: 0; }
+
+.filter-label {
+  color: rgba(255,255,255,0.45);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 6px 4px;
+}
+
+/* Status segmented control (Upcoming | Played | All) */
+.status-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 40px;
+  padding: 3px;
+}
+.seg-btn {
+  padding: 8px 6px;
+  border-radius: 40px;
+  font-family: 'Lato', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  background: transparent;
+  border: none;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.seg-btn.on {
+  background: var(--gold, #F4C430);
+  color: var(--green-deep, #0A1530);
+}
+
+/* Horizontal chip rows (Group Stage, Knockout) */
+.filter-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 4px 4px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.filter-chips::-webkit-scrollbar { display: none; }
+
+.filter-chip {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 40px;
+  font-family: 'Lato', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.filter-chip.on {
+  background: var(--gold, #F4C430);
+  border-color: var(--gold, #F4C430);
+  color: var(--green-deep, #0A1530);
 }
 .search-wrap { padding: 0 var(--page-pad) 8px; }
 .search-inner { position: relative; }
