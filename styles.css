@@ -333,7 +333,18 @@ body {
   letter-spacing: 0.07em;
   margin: 0 0 6px 4px;
 }
-
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.filter-row .team-dropdown {
+  padding: 9px 14px;
+  padding-right: 34px;
+  font-size: 14px;
+  background-position: right 12px center;
+}
 /* Status segmented control (Upcoming | Played | All) */
 .status-seg {
   display: grid;
