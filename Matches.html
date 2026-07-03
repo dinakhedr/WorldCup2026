@@ -153,15 +153,14 @@ function setGroup(v) {
     filterState.ko = 'all';
     updateChipUI('koChips', 'data-ko', 'all');
   }
-  updateChipUI('groupChips', 'data-group', v);
   applyFilters();
 }
 function setKO(v) {
   filterState.ko = v;
-  // Mutual exclusion: picking a specific KO stage resets Group to 'all'
+  // Mutual exclusion: picking a specific KO stage resets Group dropdown to 'all'
   if (v !== 'all' && filterState.group !== 'all') {
     filterState.group = 'all';
-    updateChipUI('groupChips', 'data-group', 'all');
+    document.getElementById('groupDropdown').value = 'all';
   }
   updateChipUI('koChips', 'data-ko', v);
   applyFilters();
@@ -198,14 +197,25 @@ function applyFilters() {
   renderList(list);
 }
 
+// Parse "28-Jun-26" + "22:00" into a sortable timestamp
+function matchDateKey(m) {
+  if (!m.date) return Infinity;
+  const parts = m.date.split('-');
+  if (parts.length !== 3) return Infinity;
+  const dt = new Date(`${parts[1]} ${parts[0]}, 20${parts[2]} ${m.time || '00:00'}`);
+  return isNaN(dt) ? Infinity : dt.getTime();
+}
+
 function renderList(matches) {
   const el = document.getElementById('matchList');
   if (!matches.length) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-txt">No matches found</div></div>`;
     return;
   }
+  // Sort chronologically (by date, then by kickoff time)
+  const sorted = [...matches].sort((a, b) => matchDateKey(a) - matchDateKey(b));
   const byDate = {};
-  matches.forEach(m => { (byDate[m.date || 'TBD'] = byDate[m.date || 'TBD'] || []).push(m); });
+  sorted.forEach(m => { (byDate[m.date || 'TBD'] = byDate[m.date || 'TBD'] || []).push(m); });
   let html = '';
   for (const [date, list] of Object.entries(byDate)) {
     html += `<div class="date-label">${formatDateLabel(date)}</div>`;
