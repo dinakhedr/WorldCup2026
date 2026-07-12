@@ -630,12 +630,12 @@ async function writeResolvedKOTeams() {
        94: { next: 98, slot: 'away' },
        95: { next: 100, slot: 'home' },
        96: { next: 100, slot: 'away' },
-       97: { next: 101, slot: 'home', loserNext: 103, loserSlot: 'home' },
-       98: { next: 101, slot: 'away', loserNext: 103, loserSlot: 'away' },
+       97: { next: 101, slot: 'home'},
+       98: { next: 101, slot: 'away'},
        99: { next: 102, slot: 'home' },
       100: { next: 102, slot: 'away' },
-      101: { next: 104, slot: 'home' },
-      102: { next: 104, slot: 'away' },
+      101: { next: 104, slot: 'home', loserNext: 103, loserSlot: 'home' },
+      102: { next: 104, slot: 'away', loserNext: 103, loserSlot: 'away' },
     };
 
     for (const [num, mapping] of Object.entries(KO_NEXT)) {
